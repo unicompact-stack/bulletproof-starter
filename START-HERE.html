@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Что у меня в руках? — навигатор по набору</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f6f5f2;
+    color: #1c1b19;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header {
+    background: #1c1b19;
+    color: #faf9f6;
+    padding: 48px 20px 40px;
+    margin-bottom: 32px;
+  }
+  header .wrap { padding-bottom: 0; }
+  h1 { font-size: 30px; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .sub { font-size: 17px; opacity: .8; margin: 0; max-width: 640px; }
+
+  h2 { font-size: 23px; margin: 52px 0 8px; letter-spacing: -0.01em; }
+  h2 .num { color: #b9b5ab; font-weight: 400; margin-right: 8px; }
+  .lead { color: #6b675e; margin: 0 0 22px; font-size: 15px; }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e4e1d9;
+    border-radius: 12px;
+    padding: 22px 24px;
+    margin-bottom: 14px;
+  }
+
+  .big {
+    border-left: 4px solid #d94f30;
+    background: #fffdfa;
+  }
+
+  /* метафора */
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 700px) { .meta { grid-template-columns: 1fr; } }
+  .meta .box {
+    background: #fff;
+    border: 1px solid #e4e1d9;
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .meta .box.bad { background: #fbf7f2; }
+  .meta h4 { margin: 0 0 10px; font-size: 15px; }
+  .meta p { margin: 0; font-size: 14.5px; color: #55514a; }
+
+  /* табы */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tab {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1px solid #ddd9d0;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    color: #55514a;
+  }
+  .tab:hover { background: #f0eee9; }
+  .tab.on { background: #1c1b19; color: #fff; border-color: #1c1b19; }
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  /* дерево файлов */
+  .tree { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; }
+  .row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 7px 10px; border-radius: 7px;
+  }
+  .row:nth-child(odd) { background: #faf9f6; }
+  .row .nm { white-space: nowrap; }
+  .row .ds { color: #6b675e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; }
+  .tag {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 5px; white-space: nowrap;
+  }
+  .t-you { background: #e3f0e6; color: #2c6b3f; }
+  .t-claude { background: #e6ecf7; color: #2f4d80; }
+  .t-read { background: #f2eee5; color: #7a6a3f; }
+  .t-no { background: #f4e6e3; color: #96402f; }
+
+  /* шаги */
+  .step {
+    display: grid; grid-template-columns: 42px 1fr; gap: 16px;
+    padding: 16px 0; border-bottom: 1px solid #eeebe4;
+  }
+  .step:last-child { border-bottom: none; }
+  .step .n {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #1c1b19; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+  }
+  .step.new .n { background: #d94f30; }
+  .step h4 { margin: 4px 0 4px; font-size: 15.5px; }
+  .step p { margin: 0; font-size: 14.5px; color: #55514a; }
+  .step .dur {
+    font-size: 12px; color: #9a958a;
+    background: #f2efe9; padding: 2px 8px; border-radius: 20px; margin-left: 8px;
+    white-space: nowrap;
+  }
+
+  /* этапы */
+  .sizes { display: flex; gap: 6px; margin-bottom: 18px; }
+  .stages { display: grid; gap: 8px; }
+  .stage {
+    display: grid; grid-template-columns: 30px 1fr auto; gap: 14px; align-items: center;
+    padding: 12px 14px; border-radius: 9px;
+    border: 1px solid #e4e1d9; background: #fff;
+    transition: opacity .15s, background .15s;
+  }
+  .stage.off { opacity: .32; background: #f4f2ee; }
+  .stage .e { font-size: 19px; text-align: center; }
+  .stage h4 { margin: 0 0 2px; font-size: 15px; }
+  .stage p { margin: 0; font-size: 13.5px; color: #6b675e; }
+  .stage .where {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px; color: #9a958a; white-space: nowrap;
+  }
+
+  /* чек-лист */
+  .chk { list-style: none; padding: 0; margin: 0; }
+  .chk li {
+    display: flex; gap: 13px; align-items: flex-start;
+    padding: 13px 0; border-bottom: 1px solid #eeebe4; cursor: pointer;
+  }
+  .chk li:last-child { border-bottom: none; }
+  .chk .bx {
+    width: 21px; height: 21px; flex: 0 0 21px; margin-top: 2px;
+    border: 2px solid #cfcabc; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #fff;
+  }
+  .chk li.done .bx { background: #2c6b3f; border-color: #2c6b3f; }
+  .chk li.done .tx { text-decoration: line-through; color: #a5a099; }
+  .chk .tx { font-size: 15px; }
+  .chk .hint { display: block; font-size: 13px; color: #8d887e; margin-top: 2px; }
+
+  /* словарь */
+  dl { margin: 0; }
+  dt { font-weight: 600; font-size: 15px; margin-top: 16px; }
+  dt:first-child { margin-top: 0; }
+  dd { margin: 3px 0 0; font-size: 14.5px; color: #55514a; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eeebe4; vertical-align: top; }
+  th { font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: #8d887e; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+
+  code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: #f2efe9; padding: 1px 6px; border-radius: 4px; font-size: 13px;
+  }
+  .note {
+    background: #fff8e8; border: 1px solid #f0e2c0; border-radius: 10px;
+    padding: 16px 20px; font-size: 14.5px; margin: 18px 0;
+  }
+  .note b { color: #7a5c14; }
+  a { color: #b4462a; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Что у меня в руках?</h1>
+    <p class="sub">У тебя не программа и не сайт. У тебя <b>набор заготовок</b> — как пустой,
+    но уже размеченный журнал: где писать цели, где планы, где выводы. Плюс инструкция
+    для ИИ-помощника, чтобы он не делал ерунду. Разбираемся, что со всем этим делать.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. МЕТАФОРА -->
+  <h2><span class="num">01</span>Сначала — одна картинка в голове</h2>
+  <p class="lead">Это главное. Всё остальное — детали.</p>
+
+  <div class="meta">
+    <div class="box bad">
+      <h4>Обычно новичок делает так</h4>
+      <p>Открывает чат с ИИ, пишет «сделай мне сайт для кофейни». ИИ пишет код.
+      Через день выясняется: половина не работает, другое вообще не то,
+      а правки ломают то, что работало. Каждый раз — с чистого листа,
+      потому что ИИ ничего не помнит.</p>
+    </div>
+    <div class="box">
+      <h4>С этим набором</h4>
+      <p>Сначала ты один раз, за пару часов, отвечаешь на вопросы о своём проекте.
+      Ответы ложатся в папку <code>.business/</code> — это память проекта.
+      Дальше ИИ перед каждым делом читает её, пишет план, делает,
+      а в конце заполняет «что получилось». Ошибок меньше, потому что
+      у него есть контекст и правила.</p>
+    </div>
+  </div>
+
+  <div class="card big">
+    <b>Коротко:</b> этот набор — не продукт. Это <b>порядок работы</b>, записанный файлами.
+    Сам по себе он ничего не делает. Он делает ИИ-помощника предсказуемым.
+    Ценность появляется только когда ты начинаешь в нём работать над своей задачей.
+  </div>
+
+  <!-- 2. ТРИ ПУТИ -->
+  <h2><span class="num">02</span>Что делать дальше — три пути</h2>
+  <p class="lead">Выбери тот, который про тебя. Можно по очереди.</p>
+
+  <div class="card">
+    <h4 style="margin:0 0 6px">Путь А. Установить всё у себя и пройти онбординг</h4>
+    <p style="margin:0 0 12px; color:#55514a; font-size:14.5px">
+      Правильный путь. Нужен компьютер, VS Code и подписка Claude. Занимает ~2 часа,
+      зато в конце у тебя настроенная среда под <i>твой</i> проект.
+      Что делать — в разделе 06 ниже.</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin:0 0 6px">Путь Б. Сначала понять, а потом решать</h4>
+    <p style="margin:0 0 12px; color:#55514a; font-size:14.5px">
+      Полистай этот навигатор целиком: разделы 03–05 объясняют, что лежит в папках,
+      какие 11 шагов тебя ждут и как работает 12-этапная методика.
+      Ничего устанавливать не нужно.</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin:0 0 6px">Путь В. Построить протоект прямо здесь, в песочнице</h4>
+    <p style="margin:0; color:#55514a; font-size:14.5px">
+      Если идеи ещё нет — можно собрать <b>рабочий прототип сайта или сервиса</b>
+      прямо в этом окне: я пишу код, ты смотришь на результат в браузере.
+      А правила из этого набора применим к нему же — чтобы ты увидел их в деле,
+      а не в виде текста. Никакой установки, но и «настоящей» разработки
+      на твоём компьютере тут не будет.</p>
+  </div>
+
+  <div class="note">
+    <b>Честно про песочницу:</b> здесь нельзя запустить Claude Code — это платная программа,
+    которая работает на твоём компьютере. В песочнице я могу собрать работающий
+    прототип (сайт, калькулятор, каталог, что угодно веб), показать его и отдать файлы.
+    Но полноценная среда из этого набора живёт у тебя на диске.
+  </div>
+
+  <!-- 3. ЧТО ВНУТРИ -->
+  <h2><span class="num">03</span>Что лежит в папках</h2>
+  <p class="lead">Цветные метки — кто с этим работает.</p>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; font-size:12.5px">
+    <span class="tag t-you">заполняешь ты</span>
+    <span class="tag t-claude">сделает Клод</span>
+    <span class="tag t-read">читаешь</span>
+    <span class="tag t-no">не трогай</span>
+  </div>
+
+  <div class="card">
+    <div class="tree">
+      <div class="row"><span class="nm">AUTOPILOT.md</span><span class="tag t-claude">Клод</span><span class="ds">сценарий первого запуска, 11 шагов</span></div>
+      <div class="row"><span class="nm">CLAUDE.md</span><span class="tag t-claude">Клод</span><span class="ds">правила: как ИИ работать с твоим проектом</span></div>
+      <div class="row"><span class="nm">README.md</span><span class="tag t-read">читаешь</span><span class="ds">общее описание набора</span></div>
+      <div class="row"><span class="nm">INTEGRATION.md</span><span class="tag t-read">читаешь</span><span class="ds">как сшиты два проекта (для любопытных)</span></div>
+      <div class="row"><span class="nm">TROUBLESHOOTING.md</span><span class="tag t-read">читаешь</span><span class="ds">что делать, если что-то не работает</span></div>
+      <div class="row"><span class="nm">.business/</span><span class="tag t-you">ты</span><span class="ds"><b>главное.</b> Ответы о твоём проекте: что, для кого, зачем</span></div>
+      <div class="row"><span class="nm">specs/</span><span class="tag t-claude">Клод</span><span class="ds">«что именно считается готовым» — контракт задачи</span></div>
+      <div class="row"><span class="nm">research/</span><span class="tag t-claude">Клод</span><span class="ds">«как всё устроено сейчас и что уже придумали до нас»</span></div>
+      <div class="row"><span class="nm">plans/</span><span class="tag t-claude">Клод</span><span class="ds">пошаговые планы + archive/ для закрытых</span></div>
+      <div class="row"><span class="nm">progress/</span><span class="tag t-claude">Клод</span><span class="ds">записки «на чём остановились» между сессиями</span></div>
+      <div class="row"><span class="nm">retrospectives/</span><span class="tag t-you">ты</span><span class="ds">короткие итоги: что сделали, что пошло не так</span></div>
+      <div class="row"><span class="nm">prompts/</span><span class="tag t-read">читаешь</span><span class="ds">17 готовых заданий для ИИ — бери и копируй</span></div>
+      <div class="row"><span class="nm">templates/</span><span class="tag t-no">не трогай</span><span class="ds">заготовки, из которых Клод собирает файлы</span></div>
+      <div class="row"><span class="nm">.claude/skills/bulletproof/</span><span class="tag t-no">не трогай</span><span class="ds">сама методика — 12 этапов разработки</span></div>
+      <div class="row"><span class="nm">examples/coffeeshop/</span><span class="tag t-read">читаешь</span><span class="ds">пример целиком заполненного проекта. <b>Начни с него</b></span></div>
+    </div>
+  </div>
+
+  <div class="card big">
+    <b>Первое, что стоит открыть:</b> папку <code>examples/coffeeshop/</code>.
+    Это тот же набор, но уже заполненный для выдуманной сети кофеен.
+    Глянуть на результат сильно проще, чем читать описание пустых заготовок.
+  </div>
+
+  <!-- 4. ОНБОРДИНГ -->
+  <h2><span class="num">04</span>11 шагов онбординга — что с тобой будут делать</h2>
+  <p class="lead">Ты не настраиваешь ничего сам. Ты отвечаешь на вопросы, Клод делает.</p>
+
+  <div class="card">
+    <div class="step"><div class="n">1</div><div>
+      <h4>Знакомство <span class="dur">~5 мин</span></h4>
+      <p>Клод спросит: что за проект, какая у тебя система. Больше ничего.</p>
+    </div></div>
+    <div class="step"><div class="n">2</div><div>
+      <h4>Тип проекта <span class="dur">~1 мин</span></h4>
+      <p>Коммерческий (продаёшь) или нет. От этого зависит, какие вопросы зададут дальше.</p>
+    </div></div>
+    <div class="step"><div class="n">3</div><div>
+      <h4>Стек <span class="dur">~1 мин</span></h4>
+      <p>На чём будем делать: сайт, бэкенд, мобильное, low-code. Не знаешь — так и скажи.</p>
+    </div></div>
+    <div class="step"><div class="n">4</div><div>
+      <h4>Звуковые уведомления <span class="dur">~5 мин</span></h4>
+      <p>Компьютер будет пищать, когда ИИ закончил. Мелочь, а удобно.</p>
+    </div></div>
+    <div class="step"><div class="n">5</div><div>
+      <h4>Защита от дурака <span class="dur">~5 мин</span></h4>
+      <p>Запреты: нельзя удалять файлы пачкой, читать пароли, пушить в main.</p>
+    </div></div>
+    <div class="step new"><div class="n">6</div><div>
+      <h4>Методология Bulletproof <span class="dur">~5 мин</span> <span class="tag t-claude">новый шаг</span></h4>
+      <p>Клод объяснит, как он будет браться за задачи, и покажет это на примере.</p>
+    </div></div>
+    <div class="step"><div class="n">7</div><div>
+      <h4>Проверка git <span class="dur">~3 мин</span></h4>
+      <p>Система сохранения версий. Если не настроена — настроит.</p>
+    </div></div>
+    <div class="step"><div class="n">8</div><div>
+      <h4>Пауза <span class="dur">~1 мин</span></h4>
+      <p>Момент, где можно сказать «на сегодня хватит». Продолжишь когда угодно.</p>
+    </div></div>
+    <div class="step"><div class="n">9</div><div>
+      <h4>Интервью о проекте <span class="dur">50–60 мин</span></h4>
+      <p><b>Самое важное.</b> 7 блоков вопросов про твой проект. Клод задаёт по одному
+      вопросу и сразу предлагает 3–4 варианта ответа — выбирай номер. Не знаешь —
+      он предложит свой вариант, ты скажешь «да» или «нет». Это не экзамен.</p>
+    </div></div>
+    <div class="step"><div class="n">10</div><div>
+      <h4>Сборка правил + пробный круг <span class="dur">~8 мин</span></h4>
+      <p>Клод соберёт твой <code>CLAUDE.md</code> и на микро-задаче покажет весь цикл:
+      план → сделать → итог.</p>
+    </div></div>
+    <div class="step"><div class="n">11</div><div>
+      <h4>Первое сохранение и экскурсия <span class="dur">~3 мин</span></h4>
+      <p>Сохраняем всё в git, Клод показывает, где что лежит. Всё, ты работает сам.</p>
+    </div></div>
+  </div>
+
+  <!-- 5. BULLETPROOF -->
+  <h2><span class="num">05</span>12 этапов Bulletproof — как Клод будет браться за задачу</h2>
+  <p class="lead">Не каждая задача идёт по всем 12. Нажми кнопку — увидишь, сколько этапов реально нужно.</p>
+
+  <div class="card">
+    <div class="sizes">
+      <button class="tab on" data-size="S">S — мелкая правка (1–2 файла)</button>
+      <button class="tab" data-size="M">M — новая фича (3–10 файлов)</button>
+      <button class="tab" data-size="L">L — всё переделать (10+ файлов)</button>
+    </div>
+    <div class="stages" id="stages"></div>
+    <p style="margin:16px 0 0; font-size:13.5px; color:#8d887e">
+      Размер определяет не ты — Клод, и называет его вслух перед началом.
+    </p>
+  </div>
+
+  <div class="card big">
+    <b>Если запоминать только одно:</b> три этапа экономят больше всего времени.
+    <br>— <b>Спека</b> (этап 2): заранее записать, что значит «готово». Иначе «готово» — это то, что решит ИИ.
+    <br>— <b>Анализ влияния</b> (этап 7): проверить, что не сломалось в соседнем. 75% ИИ-агентов ломают работающий код именно тут.
+    <br>— <b>Проверка на самообман</b>: хук, который не даёт сдать недоделку под видом готовой.
+  </div>
+
+  <!-- 6. ЧЕК-ЛИСТ -->
+  <h2><span class="num">06</span>Твой первый час — по пунктам</h2>
+  <p class="lead">Кликай по пунктам, чтобы отмечать. Прогресс не сохраняется — это просто порядок.</p>
+
+  <div class="card">
+    <ul class="chk" id="chk">
+      <li><span class="bx">✓</span><span class="tx">Скачать VS Code
+        <span class="hint">code.visualstudio.com — бесплатно. Это редактор, где ты будешь работать.</span></span></li>
+      <li><span class="bx">✓</span><span class="tx">Оформить подписку Claude
+        <span class="hint">Pro за $20 хватит для начала. Без подписки Claude Code не работает.</span></span></li>
+      <li><span class="bx">✓</span><span class="tx">Установить расширение Claude Code в VS Code
+        <span class="hint">Иконка в левой панели VS Code. Потом войди в аккаунт.</span></span></li>
+      <li><span class="bx">✓</span><span class="tx">Скачать эту папку к себе на компьютер
+        <span class="hint">Скачай ZIP из репозитория и распакуй, или сделай git clone. Папку назови именем своего проекта.</span></span></li>
+      <li><span class="bx">✓</span><span class="tx">Открыть папку в VS Code и написать «привет»
+        <span class="hint">Всё. Дальше Клод сам ведёт тебя по 11 шагам. От тебя — только ответы.</span></span></li>
+      <li><span class="bx">✓</span><span class="tx">Дойти до шага 9 — интервью о проекте
+        <span class="hint">Это и есть момент, где набор становится твоим. Не торопись, здесь ответы важнее всего.</span></span></li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <b>Если что-то не заработало</b> — открой файл <code>TROUBLESHOOTING.md</code>
+    в корне набора. Там решения на типовые поломки установки.
+  </div>
+
+  <!-- 7. СЛОВАРЬ -->
+  <h2><span class="num">07</span>Словарик — без него никуда</h2>
+  <p class="lead">Эти слова будут встречаться постоянно. Вот что они значат по-человечески.</p>
+
+  <div class="card">
+    <dl>
+      <dt>Клод</dt>
+      <dd>Claude — ИИ-помощник. «Клод» — просто короткое имя. Он же «агент».</dd>
+      <dt>Скил (skill)</dt>
+      <dd>Папка с инструкцией, которую ИИ сам подхватывает, когда задача подходит.
+      Как памятка, которая сама открывается в нужный момент.</dd>
+      <dt>Хук (hook)</dt>
+      <dd>Правило, которое срабатывает автоматически: зазвучать звуком,
+      заблокировать опасную команду, не дать сдать недоделку.</dd>
+      <dt>Спека (spec)</dt>
+      <dd>Описание задачи: что делаем и что значит «сделано». <b>Не</b> как делать — а что получится.</dd>
+      <dt>План</dt>
+      <dd>Как именно делаем: разбито на фазы с галочками. Живёт в <code>plans/</code>.</dd>
+      <dt>Критерий приёмки</dt>
+      <dd>Фраза, по которой можно однозначно сказать «сделано» или «не сделано».
+      Например «форма отправляется и показывает спасибо», а не «форма работает».</dd>
+      <dt>Challenge Loop</dt>
+      <dd>Три вопроса, которые Клод обязан задать себе перед тем, как писать код:
+      это решает задачу? это лучший вариант? нет ли лишней работы?</dd>
+      <dt>Анализ влияния</dt>
+      <dd>Проверка «а я ничего не сломал по соседству?» Самый полезный и самый
+      часто пропускаемый шаг.</dd>
+      <dt>Гейт (gate)</dt>
+      <dd>Проверка, которую нельзя пропустить: тесты, линтер, сборка.
+      Пока они красные — фаза не закрыта.</dd>
+      <dt>Ретроспектива</dt>
+      <dd>Короткий итог сессии из 5 пунктов: что делали, решили ли, что улучшить.</dd>
+      <dt>Контекст</dt>
+      <dd>То, что ИИ «держит в голове» за один разговор. Он ограничен.
+      Отсюда правило 40%: когда разговор разрастается, качество падает —
+      поэтому прогресс сбрасывают в файл и начинают чистый чат.</dd>
+      <dt>git, коммит, ветка</dt>
+      <dd>Система сохранения версий. Коммит = точка сохранения, на которую можно откатиться.
+      Ветка = отдельная копия, где можно экспериментировать не боясь испортить основное.</dd>
+      <dt>Bypass Permissions</dt>
+      <dd>Режим «ИИ делает без вопросов». Удобно и опасно. Включать только после
+      сохранения в git — иначе откатить будет некуда.</dd>
+    </dl>
+  </div>
+
+  <!-- 8. ЧАСТЫЕ ВОПРОСЫ -->
+  <h2><span class="num">08</span>Вопросы, которые возникают у всех</h2>
+
+  <div class="card">
+    <table>
+      <tr><td>Мне надо это читать?</td><td>Нет. Читать надо будет только ответы Клода.
+      Из всего набора тебе пригодятся три папки: <code>.business/</code>, <code>plans/</code>, <code>prompts/</code>.</td></tr>
+      <tr><td>Я не программист. Это точно для меня?</td><td>Да. Набор как раз про то, чтобы
+      не писать код руками. Но базовые вещи — «что такое файл», «что такое папка» — знать надо.</td></tr>
+      <tr><td>А если я не знаю, что за проект?</td><td>Тогда начни с пути В: собери прототип
+      здесь, посмотри, что нравится. Заполнять <code>.business/</code> лучше, когда идея
+      уже есть хотя бы в одном предложении.</td></tr>
+      <tr><td>Сколько это стоит?</td><td>Набор бесплатный (лицензия MIT).
+      Платить придётся только за подписку Claude — от $20 в месяц.</td></tr>
+      <tr><td>Что будет, если я брошу на середине?</td><td>Ничего страшного. В файле
+      <code>AUTOPILOT.md</code> Клод отмечает, на каком шаге вы остановились.
+      Вернёшься — продолжите оттуда же.</td></tr>
+      <tr><td>Можно удалить Bulletproof?</td><td>Можно — удалить папку
+      <code>.claude/skills/bulletproof/</code>. Но тогда исчезнут анализ влияния
+      и защита от недоделок — два самых полезных механизма.</td></tr>
+    </table>
+  </div>
+
+  <p style="text-align:center; color:#a5a099; font-size:13.5px; margin-top:48px">
+    Этот навигатор — просто объяснение. Настоящая работа начинается,
+    когда ты откроешь папку в VS Code и напишешь Клоду «привет».
+  </p>
+
+</div>
+
+<script>
+(function () {
+  // ---- этапы Bulletproof ----
+  var STAGES = [
+    { n: 1,  e: '🔍', t: 'Исследование', d: 'Как всё устроено сейчас и что уже придумали до нас', w: 'research/', s: 'SML' },
+    { n: 2,  e: '📋', t: 'Спека',        d: 'Что делаем и что считается «готово». Контракт',      w: 'specs/',    s: 'ML' },
+    { n: 3,  e: '🧠', t: 'План + критика', d: 'План, 2–3 альтернативы и почему выбранный лучше',  w: 'plans/',    s: 'ML' },
+    { n: 4,  e: '⚡', t: 'Реализация',   d: 'Пишем код по фазам: тесты сначала, потом сам код',   w: 'код',       s: 'SML' },
+    { n: 5,  e: '✅', t: 'Самопроверка', d: 'Проходим по каждому критерию из спеки',              w: '—',         s: 'SML' },
+    { n: 6,  e: '🔬', t: 'Верификация',  d: 'Ищем баги и доказываем, что они настоящие',          w: '—',         s: 'SML' },
+    { n: 7,  e: '💥', t: 'Анализ влияния', d: 'Что сломалось по соседству? Гоняем все тесты',     w: '—',         s: 'SML' },
+    { n: 8,  e: '🔗', t: 'Интеграция',   d: 'Все фазы вместе: работает ли в сборе',               w: '—',         s: 'ML' },
+    { n: 9,  e: '👁️', t: 'Код-ревью',    d: 'Свежий агент смотрит на код без обид автора',        w: '—',         s: 'ML' },
+    { n: 10, e: '🔒', t: 'Безопасность', d: 'Автосканирование на уязвимости',                     w: '—',         s: 'ML' },
+    { n: 11, e: '🔧', t: 'Правки',       d: 'Чиним найденное и перепроверяем влияние',            w: '—',         s: 'L' },
+    { n: 12, e: '🚀', t: 'Финал',        d: 'План в архив, ретро, деплой — только по твоей команде', w: 'archive/', s: 'L' }
+  ];
+  var sizes = { S: 'SML', M: 'ML', L: 'ML' };
+
+  var box = document.getElementById('stages');
+  function render(size) {
+    box.innerHTML = '';
+    STAGES.forEach(function (st) {
+      var on = st.s.indexOf(size) !== -1;
+      var div = document.createElement('div');
+      div.className = 'stage' + (on ? '' : ' off');
+      div.innerHTML =
+        '<div class="e">' + st.e + '</div>' +
+        '<div><h4>' + st.n + '. ' + st.t + '</h4><p>' + st.d + '</p></div>' +
+        '<div class="where">' + (on ? st.w : 'пропуск') + '</div>';
+      box.appendChild(div);
+    });
+  }
+  render('S');
+
+  document.querySelectorAll('[data-size]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-size]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      render(b.getAttribute('data-size'));
+    });
+  });
+
+  // ---- чек-лист ----
+  document.querySelectorAll('#chk li').forEach(function (li) {
+    li.addEventListener('click', function () { li.classList.toggle('done'); });
+  });
+})();
+</script>
+
+</body>
+</html>

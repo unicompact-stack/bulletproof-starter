@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Методика на живом примере</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #FBFBFC; color: #1A1D21; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 56px 28px 100px; }
+
+  h1 { font-size: 34px; line-height: 1.25; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .sub { font-size: 17px; color: #5C6570; margin: 0 0 40px; }
+
+  h2 {
+    font-size: 22px; margin: 64px 0 8px; letter-spacing: -0.01em;
+    padding-top: 28px; border-top: 2px solid #E8EAED;
+  }
+  .h2note { color: #5C6570; font-size: 15px; margin: 0 0 24px; }
+
+  .idea {
+    background: linear-gradient(135deg, #1A1D21 0%, #2D333B 100%);
+    color: #fff; border-radius: 14px; padding: 32px 34px; margin: 32px 0 8px;
+  }
+  .idea h3 { margin: 0 0 14px; font-size: 20px; letter-spacing: -0.01em; }
+  .idea p { margin: 0 0 14px; font-size: 16px; color: #D6DAE0; }
+  .idea strong { color: #fff; }
+  .idea .punch {
+    font-size: 18px; color: #fff; margin: 20px 0 0; padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,.16); font-weight: 600;
+  }
+
+  .card {
+    background: #fff; border: 1px solid #E4E7EB; border-radius: 12px;
+    padding: 22px 24px; margin: 14px 0;
+  }
+  .card .num {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+    color: #fff; background: #1A1D21; border-radius: 5px; padding: 3px 8px; margin-bottom: 10px;
+  }
+  .card h4 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+  .card .q { color: #5C6570; font-size: 14px; margin: 0 0 16px; font-style: italic; }
+
+  .lie {
+    background: #FFF6F4; border-left: 3px solid #E5484D;
+    padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 0 0 14px; font-size: 14.5px;
+  }
+  .lie b { color: #B42318; }
+
+  .happened { font-size: 15px; margin: 0; }
+  .happened ul { margin: 8px 0 0; padding-left: 20px; }
+  .happened li { margin: 5px 0; }
+
+  .ok   { color: #14804A; font-weight: 600; }
+  .bad  { color: #B42318; font-weight: 600; }
+  .warn { color: #9A6400; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; background:#fff;
+          border:1px solid #E4E7EB; border-radius:10px; overflow:hidden; }
+  th { background: #F5F6F8; text-align: left; padding: 11px 14px; font-size: 12.5px;
+       letter-spacing: .04em; text-transform: uppercase; color: #5C6570; }
+  td { padding: 12px 14px; border-top: 1px solid #EDF0F2; vertical-align: top; }
+  tr:first-child td { border-top: none; }
+
+  .blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: 10px; margin: 20px 0; }
+  .blk { background: #fff; border: 1px solid #E4E7EB; border-radius: 10px; padding: 14px 16px; }
+  .blk .n { font-size: 11px; font-weight: 700; color: #9AA2AC; letter-spacing: .08em; }
+  .blk .t { font-weight: 600; margin: 3px 0 6px; font-size: 15px; }
+  .blk .w { font-size: 13px; color: #5C6570; }
+
+  .callout {
+    background: #F0F7FF; border: 1px solid #C6DFFA; border-radius: 10px;
+    padding: 18px 20px; margin: 22px 0; font-size: 15px;
+  }
+  .callout b { color: #0B4A8F; }
+
+  .lesson { background: #FFFBEB; border: 1px solid #F5D98C; border-radius: 12px; padding: 24px 28px; margin: 24px 0; }
+  .lesson h3 { margin: 0 0 12px; font-size: 18px; color: #7A4E00; }
+  .lesson ul { margin: 0; padding-left: 20px; font-size: 15px; }
+  .lesson li { margin: 9px 0; }
+
+  code { background: #F0F2F4; padding: 2px 6px; border-radius: 4px; font-size: 13.5px;
+         font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .footer { margin-top: 70px; padding-top: 24px; border-top: 2px solid #E8EAED;
+            color: #5C6570; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Методика на живом примере</h1>
+  <p class="sub">Разбор того, что мы только что прошли — с настоящими ошибками, а не с выдуманными.</p>
+
+  <div class="idea">
+    <h3>Главное, что нужно понять</h3>
+    <p>Методика — это <strong>не 12 шагов, которые надо выполнить</strong>. Это машина для того,
+    чтобы превратить «у меня есть идея» в «я знаю, что делать дальше» — <strong>не обманывая себя по дороге</strong>.</p>
+    <p>У каждого этапа ровно одна работа: <strong>поймать конкретный тип вранья</strong>.
+    Не «сделать документ», а не дать тебе соврать самому себе в определённом месте.</p>
+    <p class="punch">Ошибка, которую делают почти все: думают, что документы — это цель. Нет. Документы — это побочный продукт. Цель — не врать себе.</p>
+  </div>
+
+  <h2>Этап 0. Интервью о проекте <span style="color:#9AA2AC;font-size:15px;font-weight:400">— то, чего у нас не было</span></h2>
+  <p class="h2note">Всё остальное можно делать без тебя. Это — нельзя. Отсюда и берётся ощущение «это не моё».</p>
+
+  <div class="blocks">
+    <div class="blk"><div class="n">БЛОК 1</div><div class="t">Компания</div><div class="w">Кто ты и в каких условиях работаешь</div></div>
+    <div class="blk"><div class="n">БЛОК 2</div><div class="t">Продукт</div><div class="w">Что именно ты делаешь</div></div>
+    <div class="blk"><div class="n">БЛОК 3</div><div class="t">Аудитория</div><div class="w">Кому это нужно</div></div>
+    <div class="blk"><div class="n">БЛОК 4</div><div class="t">Цели</div><div class="w">Что считать успехом</div></div>
+    <div class="blk"><div class="n">БЛОК 5</div><div class="t">Конкуренты</div><div class="w">Кто уже это делает</div></div>
+    <div class="blk"><div class="n">БЛОК 6</div><div class="t">Экономика</div><div class="w">На чём зарабатываешь</div></div>
+    <div class="blk"><div class="n">БЛОК 7</div><div class="t">Риски</div><div class="w">Что тебя убьёт</div></div>
+  </div>
+
+  <div class="callout">
+    <b>Почему именно такой порядок?</b> Потому что каждый блок сужает вопросы следующего.
+    Нельзя спрашивать «сколько стоит» (блок 6), пока не знаешь «что продаёшь» (блок 2) и «кому» (блок 3).
+    А <b>Reality Check</b> стоит после блока 2 потому, что знаний уже достаточно, чтобы найти дыры,
+    но ты ещё не вложился в детали и не жалко всё переиграть.
+  </div>
+
+  <h2>12 этапов — и что из этого вышло у нас</h2>
+  <p class="h2note">Зелёное — сработало. Красное — провалилось. Жёлтое — сделано, но не до конца.</p>
+
+  <div class="card">
+    <span class="num">ЭТАП 1</span>
+    <h4>Исследование</h4>
+    <p class="q">Что на самом деле правда?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Я и так знаю, как устроен рынок / свой проект».</div>
+    <div class="happened">
+      <b>У нас:</b>
+      <ul>
+        <li><span class="ok">Сработало</span> — аудит FSM PRO нашёл 7 проблем, которые ты не видел: нет бэкенда, коды в открытом виде, 100+ мусорных файлов</li>
+        <li><span class="ok">Сработало</span> — аудит новой ниши нашёл, что парсер — тупик, потому что заказ без телефона не продаётся</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 2</span>
+    <h4>Спецификация</h4>
+    <p class="q">Что мы считаем «готово»?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Я пойму, что готово, когда увижу».</div>
+    <div class="happened">
+      <b>У нас:</b>
+      <ul>
+        <li><span class="ok">Сработало</span> — 10 критериев К1–К10, по ним потом проверяли</li>
+        <li><span class="bad">Провалилось</span> — ты ни разу не сказал «да, это то, что я хочу». Я написал спеку и побежал писать код</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 3</span>
+    <h4>План и Challenge Log</h4>
+    <p class="q">Почему именно этот путь, а не другой?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Других вариантов всё равно нет».</div>
+    <div class="happened">
+      <b>У нас:</b>
+      <ul>
+        <li><span class="ok">Сработало</span> — 5 альтернатив базе данных разобраны и отвергнуты с причинами (FastAPI, Postgres, Supabase, JSON-файл, SQLite)</li>
+        <li><span class="warn">Недоработка</span> — риск «песочница теряет зависимости» я знал из прошлого раза, но в план не записал</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 4</span>
+    <h4>Реализация по фазам</h4>
+    <p class="q">Делаем по кускам, каждый из которых можно проверить отдельно.</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Сначала напишу всё, потом разберусь».</div>
+    <div class="happened">
+      <b>У нас:</b> 4 фазы — база → API → страницы → тесты. Каждая заканчивалась проверяемым результатом.
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 5</span>
+    <h4>Самопроверка</h4>
+    <p class="q">Я правда проверил, а не просто написал «готово»?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Работает — значит готово».</div>
+    <div class="happened">
+      <b>У нас:</b>
+      <ul>
+        <li><span class="bad">Провалилось</span> — я проверил health и смену статуса, они работали, и пошёл писать тесты</li>
+        <li>Создание задач и страницы не проверил. Оба оказались сломаны</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 6</span>
+    <h4>Верификация</h4>
+    <p class="q">Где я накосячил? Докажи.</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Багов нет, потому что я их не вижу».</div>
+    <div class="happened">
+      <b>У нас:</b> <span class="ok">сработало</span> — найдено 4 бага с доказательствами, два блокирующих:
+      создание задачи падало с ошибкой 500, обе страницы отдавали 404.
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 7</span>
+    <h4>Анализ влияния</h4>
+    <p class="q">Что ещё я мог сломать по дороге?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Я починил то, что проверял, значит всё остальное цело».</div>
+    <div class="happened"><b>У нас:</b> разобрано 6 точек, где правки могли задеть соседнее.</div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 8</span>
+    <h4>Интеграция</h4>
+    <p class="q">Работает ли всё вместе, а не только по отдельности?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Каждая деталь исправна, значит и машина едет».</div>
+    <div class="happened"><b>У нас:</b> сквозной прогон из 9 шагов — от заявки до приёмки.</div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 9</span>
+    <h4>Код-ревью</h4>
+    <p class="q">Что я не заметил, потому что я это писал?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «Я автор, мне виднее».</div>
+    <div class="happened">
+      <b>У нас:</b> 8 находок — 3 исправлены, 5 приняты как долг. <span class="warn">Честно:</span>
+      ревью делал я сам, а должен кто-то другой. Это слабое место этой итерации.
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 10</span>
+    <h4>Безопасность</h4>
+    <p class="q">Кто нас обманет первым?</p>
+    <div class="lie"><b>Ложь, которую ловит:</b> «На меня никто не будет нападать, я никому не нужен».</div>
+    <div class="happened">
+      <b>У нас:</b> проверены SQL-инъекции, XSS, секреты. Честно записано, что <b>не</b> защищено:
+      нет авторизации, данные от клиента доверяются, CORS открыт.
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 11</span>
+    <h4>Правки</h4>
+    <p class="q">Исправить найденное — и доказать тестами, что исправлено.</p>
+    <div class="lie"><b>Ловит:</b> «Я понял проблему, значит она решена».</div>
+    <div class="happened"><b>У нас:</b> 5 исправлений, 23 теста — все зелёные.</div>
+  </div>
+
+  <div class="card">
+    <span class="num">ЭТАП 12</span>
+    <h4>Деплой и ретроспектива</h4>
+    <p class="q">Чему я научился, что сделаю иначе?</p>
+    <div class="lie"><b>Ловит:</b> «Всё прошло нормально, идём дальше».</div>
+    <div class="happened"><b>У нас:</b> ретро написано, главный урок зафиксирован — см. ниже.</div>
+  </div>
+
+  <h2>Что ты должен был заметить сам</h2>
+  <p class="h2note">Вот ради чего всё затевалось. Это то, что методика должна была дать лично тебе.</p>
+
+  <div class="lesson">
+    <h3>Главный урок этой итерации</h3>
+    <ul>
+      <li><b>Тесты проверяют ровно то, о чём ты догадался.</b> Я догадался проверить health и смену статуса.
+      Не догадался — создание задач и страницы. Оба оказались сломаны, и оба нашёл не я, а тесты и ручная проверка.</li>
+      <li><b>Момент, когда продукт поменялся — это не провал, это этап 1 сработал.</b> Ты сказал «FSM PRO
+      трогать не буду, придумываю новое». Правильная реакция по методике — остановиться и вернуться к исследованию.
+      Неправильная — доделывать по инерции.</li>
+      <li><b>Вопрос «почему забросили» важнее любой фичи.</b> Люди уже пробовали твой продукт. Их не спросили
+      ни о чём. Это единственный бесплатный источник правды, и он не использован.</li>
+      <li><b>«Мне не нравится внешний вид» и «работники не хотят пользоваться» — возможно, одна проблема.</b>
+      Если мастер открывает интерфейс, похожий на казённую таблицу, он туда не вернётся.
+      Твоё эстетическое «не то» может быть бизнес-проблемой.</li>
+    </ul>
+  </div>
+
+  <h2>Короткая версия, чтобы пользоваться без меня</h2>
+
+  <table>
+    <tr><th style="width:38%">Если ты хочешь…</th><th>Сначала ответь на вопрос</th></tr>
+    <tr><td>Начать новый продукт</td><td><b>Кто им будет пользоваться и что он делает сейчас?</b> Если не знаешь — спроси. Не отвечай за него</td></tr>
+    <tr><td>Добавить фичу</td><td><b>Как мы поймём, что она работает?</b> Не можешь сформулировать — фича тебе не нужна</td></tr>
+    <tr><td>Сказать «готово»</td><td><b>Я проверил это руками или просто написал код?</b> Проверь руками каждый путь</td></tr>
+    <tr><td>Выбрать технологию</td><td><b>Какие есть ещё два варианта и почему они хуже?</b> Не можешь назвать — ты не выбирал</td></tr>
+    <tr><td>Закончить итерацию</td><td><b>Чему я научился?</b> Не можешь ответить — итерация не закончена</td></tr>
+  </table>
+
+  <div class="footer">
+    Собрано 2026-09-10 по материалам реальной сессии: FSM PRO (сервер, админка, 23 теста) и
+    аудит новой затеи «площадка заказов в регионе 12».<br>
+    Все оценки и цены в разборе ниши — приблизительные и требуют проверки на живых людях.
+  </div>
+
+</div>
+</body>
+</html>

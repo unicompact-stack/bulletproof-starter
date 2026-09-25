@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #F4F7FA;
+    color: #263238;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Pulse animation for active work */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(22, 139, 234, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(22, 139, 234, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(22, 139, 234, 0);
+  }
+}
+
+.pulse-active {
+  animation: pulse-ring 2s infinite;
+}
+
+/* ===== PRINT STYLES (Акт приёма-сдачи → PDF) ===== */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Скрываем весь UI, кроме модального окна акта */
+  header,
+  .demo-guide,
+  .fixed,
+  #root > div > header,
+  #root > div > div:not(.print-area) {
+    display: none !important;
+  }
+
+  /* Печатная область акта */
+  .fixed.inset-0 {
+    position: static !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .fixed.inset-0 > div {
+    max-width: 100% !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Контент акта */
+  .fixed.inset-0 .overflow-y-auto,
+  .fixed.inset-0 .p-6 {
+    overflow: visible !important;
+    padding: 12px !important;
+  }
+
+  /* Кнопки и топ-бар не печатаем */
+  .print\:hidden {
+    display: none !important;
+  }
+}
+
+/* Utility: запрет скролла при открытом модальном окне */
+body:has(.fixed.inset-0) {
+  overflow: hidden;
+}
+@media print {
+  body:has(.fixed.inset-0) {
+    overflow: visible !important;
+  }
+}

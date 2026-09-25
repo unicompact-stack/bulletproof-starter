@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>FSM PRO — Мастер</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #EEF2F6; color: #1c2530;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .phone {
+    max-width: 420px; margin: 0 auto; min-height: 100vh;
+    background: #F4F7FA; display: flex; flex-direction: column;
+  }
+  header {
+    background: #168BEA; color: #fff; padding: 16px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  header .t { font-size: 16px; font-weight: 700; flex: 1; }
+  header a { color: #fff; text-decoration: none; font-size: 13px; opacity: .9; }
+  .av {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 34px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #fff; background: rgba(255,255,255,.25);
+  }
+  .live { font-size: 11px; opacity: .85; padding: 6px 18px; background: #0F6FB2; color: #fff; }
+
+  .wrap { flex: 1; padding: 14px; overflow-y: auto; }
+
+  .login { padding: 40px 22px; text-align: center; }
+  .login h2 { margin: 0 0 6px; font-size: 19px; }
+  .login p { color: #6B7A8C; font-size: 13.5px; margin: 0 0 22px; }
+  .login input {
+    width: 100%; padding: 15px; border: 1px solid #DDE4EB; border-radius: 12px;
+    font-size: 20px; text-align: center; letter-spacing: .35em; font-family: inherit;
+  }
+  .login input:focus { outline: none; border-color: #168BEA; }
+  .codes { margin-top: 16px; font-size: 12.5px; color: #8A97A5; line-height: 1.8; }
+  .codes b { color: #54626F; font-family: ui-monospace, Menlo, monospace; }
+
+  .filters { display: flex; gap: 6px; margin-bottom: 12px; }
+  .pill {
+    border: 1px solid #E3E9EF; background: #fff; border-radius: 20px;
+    padding: 7px 13px; font-size: 13px; cursor: pointer; color: #54626F; font-family: inherit;
+  }
+  .pill.on { background: #168BEA; color: #fff; border-color: #168BEA; }
+
+  .task {
+    background: #fff; border-radius: 14px; padding: 15px 16px; margin-bottom: 11px;
+    border: 1px solid #E9EEF3;
+  }
+  .task.free { border-left: 4px solid #2CCB70; }
+  .task.rework { border-left: 4px solid #E04B4B; }
+  .task .ttl { font-weight: 700; font-size: 15px; margin-bottom: 5px; }
+  .task .addr { font-size: 13px; color: #54626F; margin-bottom: 3px; }
+  .task .cust { font-size: 12.5px; color: #8A97A5; margin-bottom: 10px; }
+  .task .row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 600;
+  }
+  .b-new          { background: #E3F7EC; color: #1B8F4E; }
+  .b-assigned     { background: #F0E9FB; color: #6B32AF; }
+  .b-in_progress  { background: #E4F1FD; color: #0F6FB2; }
+  .b-under_review { background: #F0E9FB; color: #6B32AF; }
+  .b-completed    { background: #E9EDF1; color: #54626F; }
+  .b-overdue      { background: #FDECEC; color: #C33A3A; }
+
+  .big {
+    width: 100%; border: none; border-radius: 12px; padding: 16px;
+    font-size: 16px; font-weight: 700; color: #fff; background: #168BEA;
+    cursor: pointer; font-family: inherit; margin-top: 4px;
+  }
+  .big.green { background: #2CCB70; }
+  .big.ghost { background: #EEF2F6; color: #54626F; }
+  .big:disabled { opacity: .5; }
+
+  .err {
+    background: #FDECEC; color: #C33A3A; border-radius: 10px;
+    padding: 11px 14px; font-size: 13px; margin-bottom: 12px; display: none;
+  }
+  .err.show { display: block; }
+
+  .empty { text-align: center; color: #9AA7B5; padding: 50px 20px; font-size: 14px; }
+  .mine { font-size: 12.5px; color: #8A97A5; padding: 0 4px 10px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <header>
+    <div class="av" id="av">?</div>
+    <div class="t" id="who">FSM PRO · Мастер</div>
+    <a href="/admin">Админка →</a>
+  </header>
+  <div class="live" id="live">подключение…</div>
+
+  <div class="wrap" id="wrap"></div>
+</div>
+
+<script>
+const LABELS = {
+  new: 'Новая', assigned: 'Назначена', in_progress: 'В работе',
+  under_review: 'На проверке', completed: 'Завершена'
+};
+const TRANSITIONS = {
+  new: ['assigned'],
+  assigned: ['in_progress', 'new'],
+  in_progress: ['under_review'],
+  under_review: ['completed', 'in_progress'],
+  completed: []
+};
+// Что видит мастер на кнопке. Руководитель принимает — мастер не может.
+const ACTION = { 'assigned': 'Взяться за задачу', 'in_progress': 'Начать работу', 'under_review': 'Отправить на проверку' };
+
+const state = { me: null, tasks: [], filter: 'mine', users: [] };
+const $ = (id) => document.getElementById(id);
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    const b = await r.json().catch(() => ({}));
+    throw new Error(b.error || ('HTTP ' + r.status));
+  }
+  return r.json();
+}
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const initials = (n) => n.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+const colorOf = (name) => {
+  const p = ['#168BEA', '#2CCB70', '#9546D8', '#E08A3C', '#3AA8A0', '#C2557A'];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return p[h % p.length];
+};
+const fmtDate = (s) => s ? new Date(s).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+
+function renderLogin() {
+  $('wrap').innerHTML = `
+    <div class="login">
+      <h2>Вход для мастера</h2>
+      <p>Введите свой код доступа</p>
+      <input type="text" id="code" maxlength="8" placeholder="••••" autocomplete="off">
+      <div style="margin-top:14px">
+        <button class="big" id="go">Войти</button>
+      </div>
+      <div class="codes">
+        Сидоров (бригада 1) — <b>1111</b><br>
+        Кузнецов (бригада 1) — <b>2222</b><br>
+        Морозова (бригада 2) — <b>3333</b><br>
+        Руководитель — <b>9999</b>
+      </div>
+    </div>`;
+  const inp = $('code');
+  inp.focus();
+  $('go').onclick = () => login(inp.value);
+  inp.onkeydown = (e) => { if (e.key === 'Enter') login(inp.value); };
+}
+
+async function login(code) {
+  try {
+    const u = await api('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code.trim() })
+    });
+    state.me = u;
+    $('who').textContent = u.fullName;
+    $('av').textContent = initials(u.fullName);
+    $('av').style.background = colorOf(u.fullName);
+    render();
+    setInterval(refresh, 5000);
+  } catch (e) {
+    renderLogin();
+    $('wrap').insertAdjacentHTML('afterbegin', `<div class="err show">${esc(e.message)}</div>`);
+  }
+}
+
+function render() {
+  const isManager = state.me.role === 'manager';
+  const mine = state.tasks.filter((t) => t.assigned_to === state.me.id && t.status !== 'completed');
+  const free = state.tasks.filter((t) => !t.assigned_to);
+  const done = state.tasks.filter((t) => t.assigned_to === state.me.id && t.status === 'completed');
+
+  const list = state.filter === 'mine' ? mine : state.filter === 'free' ? free : done;
+
+  $('wrap').innerHTML = `
+    <div class="err" id="wErr"></div>
+    <div class="filters">
+      <button class="pill ${state.filter === 'mine' ? 'on' : ''}" data-f="mine">Мои · ${mine.length}</button>
+      <button class="pill ${state.filter === 'free' ? 'on' : ''}" data-f="free">Свободные · ${free.length}</button>
+      <button class="pill ${state.filter === 'done' ? 'on' : ''}" data-f="done">Завершённые · ${done.length}</button>
+    </div>
+    <div id="list"></div>`;
+
+  $('wrap').querySelectorAll('[data-f]').forEach((b) =>
+    b.onclick = () => { state.filter = b.dataset.f; render(); });
+
+  const box = $('list');
+  if (!list.length) {
+    box.innerHTML = `<div class="empty">Здесь пока ничего нет</div>`;
+    return;
+  }
+
+  box.innerHTML = list.map((t) => {
+    const next = (TRANSITIONS[t.status] || []).filter((s) => ACTION[s]);
+    const isFree = !t.assigned_to;
+    const btn = next.length
+      ? `<button class="big ${isFree ? 'green' : ''}" data-id="${t.id}" data-to="${next[0]}">${ACTION[next[0]]}</button>`
+      : t.status === 'under_review'
+        ? `<button class="big ghost" disabled>${isManager ? '' : 'Ждём руководителя'}</button>`
+        : '';
+
+    return `
+      <div class="task ${isFree ? 'free' : ''}">
+        <div class="ttl">${esc(t.title)}</div>
+        <div class="addr">${esc(t.address || '')}</div>
+        <div class="cust">${esc(t.customer_name || '')}${t.customer_phone ? ' · ' + esc(t.customer_phone) : ''}</div>
+        <div class="row">
+          <span class="badge b-${t.status}">${LABELS[t.status]}</span>
+          ${t.isOverdue ? '<span class="badge b-overdue">просрочено</span>' : ''}
+          <span style="font-size:12px;color:#8A97A5">срок ${fmtDate(t.due_at)}</span>
+        </div>
+        ${btn}
+      </div>`;
+  }).join('');
+
+  box.querySelectorAll('[data-to]').forEach((b) =>
+    b.onclick = () => act(b.dataset.id, b.dataset.to));
+}
+
+async function act(id, to) {
+  const err = $('wErr');
+  try {
+    await api('/api/tasks/' + encodeURIComponent(id) + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: to,
+        actorId: state.me.id,
+        // Исполнитель назначается в той же транзакции, что и смена статуса.
+        ...(to === 'assigned' ? { assigneeId: state.me.id } : {})
+      })
+    });
+    await refresh();
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+  }
+}
+
+async function refresh() {
+  try {
+    state.tasks = await api('/api/tasks');
+    $('live').textContent = 'общая база · обновлено ' + new Date().toLocaleTimeString('ru-RU');
+    render();
+  } catch (e) {
+    $('live').textContent = 'нет связи: ' + e.message;
+  }
+}
+
+renderLogin();
+</script>
+</body>
+</html>

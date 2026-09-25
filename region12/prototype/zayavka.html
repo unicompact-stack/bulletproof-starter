@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Регион12 — заявка на услугу</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #FBF6F0;
+    --surface:   #FFFFFF;
+    --ink:       #241E29;
+    --muted:     #7B6F7C;
+    --line:      #EDE3D8;
+    --accent:    #7C3AED;
+    --accent-dk: #5B21B6;
+    --accent-sf: #F4EDFF;
+    --warm:      #FDF8F2;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(900px 420px at 50% -140px, #F0E4FF 0%, rgba(240,228,255,0) 68%);
+    background-repeat: no-repeat;
+    color: var(--ink);
+    line-height: 1.58;
+    -webkit-font-smoothing: antialiased;
+    padding: 0 0 60px;
+  }
+
+  .shell { max-width: 540px; margin: 0 auto; background: var(--surface);
+           border-radius: 26px; overflow: hidden; margin-top: 22px;
+           box-shadow: 0 20px 50px -22px rgba(60,32,90,.22), 0 2px 8px rgba(60,32,90,.05);
+           border: 1px solid rgba(255,255,255,.7); }
+
+  .top { padding: 20px 26px; display: flex; align-items: center; justify-content: space-between;
+         background: linear-gradient(120deg, #F7F1EA 0%, #FBF6F0 100%);
+         border-bottom: 1px solid var(--line); }
+  .logo { font-weight: 800; font-size: 18px; letter-spacing: -0.03em; }
+  .logo span { color: var(--accent); }
+  .city { font-size: 13px; color: var(--accent-dk); background: #fff;
+          padding: 6px 13px; border-radius: 99px; border: 1px solid #E6DAF5; font-weight: 500; }
+
+  .hero { padding: 34px 28px 10px; }
+  .hero h1 { font-size: 27px; line-height: 1.22; letter-spacing: -0.03em; margin-bottom: 10px; font-weight: 750; }
+  .hero p { color: var(--muted); font-size: 15px; }
+
+  .bar { padding: 24px 28px 4px; }
+  .track { height: 7px; background: #F2EAE0; border-radius: 99px; overflow: hidden; }
+  .fill  { height: 100%; border-radius: 99px; transition: width .4s cubic-bezier(.4,0,.2,1);
+           background: linear-gradient(90deg, #A78BFA, #7C3AED); }
+  .meta  { display: flex; justify-content: space-between; font-size: 12.5px;
+           color: #A394A8; margin-top: 9px; font-weight: 500; }
+
+  .body { padding: 20px 28px 8px; }
+
+  .q    { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .hint { font-size: 14.5px; color: var(--muted); margin-bottom: 22px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px;
+    padding: 13px 18px; font-size: 15px; cursor: pointer; font-family: inherit;
+    color: var(--ink); font-weight: 500; min-height: 48px;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+  }
+  .chip:hover { border-color: #D9C9EE; background: var(--warm); transform: translateY(-1px); }
+  .chip.on {
+    border-color: var(--accent); background: var(--accent-sf); color: var(--accent-dk);
+    font-weight: 650; box-shadow: 0 4px 14px -4px rgba(124,58,237,.35);
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .opt {
+    border: 1.5px solid var(--line); border-radius: 16px; padding: 15px 17px;
+    cursor: pointer; font-size: 15.5px; background: var(--surface);
+    display: flex; align-items: center; gap: 13px; min-height: 56px; font-weight: 500;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+  }
+  .opt:hover { border-color: #D9C9EE; background: var(--warm); transform: translateY(-1px); }
+  .opt.on {
+    border-color: var(--accent); background: var(--accent-sf); color: var(--accent-dk);
+    box-shadow: 0 4px 14px -4px rgba(124,58,237,.32);
+  }
+  .dot { width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid #D6CBE2;
+         flex: 0 0 auto; display: flex; align-items: center; justify-content: center; transition: all .12s ease; }
+  .opt.on .dot { border-color: var(--accent); background: var(--accent); }
+  .opt.on .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+
+  .fld { margin-bottom: 22px; }
+  .fld label { display: block; font-size: 13.5px; font-weight: 650; color: #4A404F; margin-bottom: 8px; }
+  .fld input, .fld textarea {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 14px; padding: 13px 16px;
+    font-size: 15.5px; font-family: inherit; color: var(--ink); background: var(--surface);
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .fld input:focus, .fld textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(124,58,237,.10);
+  }
+  .fld textarea { resize: vertical; min-height: 86px; }
+  .fld .tip { font-size: 12.5px; color: #A394A8; margin-top: 6px; }
+
+  .row { display: flex; gap: 12px; }
+  .row .fld { flex: 1; }
+
+  .foot { padding: 18px 28px 32px; display: flex; gap: 12px; align-items: center; }
+  .btn {
+    flex: 1; border: none; border-radius: 16px; padding: 15px; font-size: 16px;
+    font-weight: 650; cursor: pointer; font-family: inherit; color: #fff; min-height: 54px;
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    box-shadow: 0 8px 20px -8px rgba(109,40,217,.55);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -8px rgba(109,40,217,.6); }
+  .btn:disabled { background: #E7DFF2; color: #A99FB5; box-shadow: none; cursor: not-allowed; transform: none; }
+  .btn.ghost { flex: 0 0 auto; background: #fff; color: var(--muted); border: 1.5px solid var(--line);
+               padding: 15px 22px; font-weight: 600; box-shadow: none; }
+  .btn.ghost:hover { background: var(--warm); border-color: #D9C9EE; transform: translateY(-1px); }
+
+  /* Итог */
+  .done-mark { text-align: center; padding: 30px 0 12px; }
+  .circle { width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 16px;
+            background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 24px -8px rgba(109,40,217,.55); }
+  .done-mark h2 { font-size: 21px; letter-spacing: -0.02em; margin-bottom: 7px; font-weight: 750; }
+  .done-mark p { color: var(--muted); font-size: 14.5px; }
+
+  .brief { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; margin: 22px 0 18px;
+           background: var(--surface); }
+  .brief .head { background: linear-gradient(120deg,#F7F1EA,#FBF6F0); padding: 12px 17px; font-size: 12.5px;
+                 text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650;
+                 border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+  .brief .head b { color: var(--accent-dk); text-transform: none; letter-spacing: 0; }
+  .row2 { display: flex; border-bottom: 1px solid #F6F0E9; }
+  .row2:last-child { border-bottom: none; }
+  .brief dt { width: 42%; padding: 12px 17px; font-size: 13.5px; color: var(--muted); background: #FDFAF6; }
+  .brief dd { width: 58%; padding: 12px 17px; font-size: 14px; font-weight: 600; margin: 0; }
+
+  .compare { border-radius: 18px; padding: 18px 19px; margin: 0 0 20px;
+             background: linear-gradient(135deg, #F4EDFF, #FDF6F0);
+             border: 1px solid #E6DAF5; }
+  .compare .lbl { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em;
+                  color: var(--accent-dk); margin-bottom: 10px; font-weight: 700; }
+  .compare .old { font-size: 14.5px; color: #8B7A90; font-style: italic; }
+  .compare .arrow { color: var(--accent); margin: 9px 0; font-size: 16px; }
+  .compare .new { font-size: 14.5px; color: var(--ink); font-weight: 600; line-height: 1.5; }
+
+  .note { font-size: 13px; color: #A394A8; text-align: center; padding: 0 24px 26px; line-height: 1.55; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="top">
+    <div class="logo">Регион<span>12</span></div>
+    <div class="city">Йошкар-Ола</div>
+  </div>
+
+  <div id="quiz">
+
+    <div class="hero" id="hero">
+      <h1>Найдём мастера рядом</h1>
+      <p>Пять коротких вопросов вместо длинного объявления. Мастера сразу увидят готовое описание — без десяти уточняющих звонков.</p>
+    </div>
+
+    <div class="bar">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="meta"><span id="stepLbl">Шаг 1 из 5</span><span id="stepName">Услуга</span></div>
+    </div>
+
+    <div class="body">
+
+      <div class="pane" data-step="1">
+        <div class="q">Что нужно сделать?</div>
+        <div class="hint">Выберите одно — остальное уточним дальше</div>
+        <div class="chips" data-group="service">
+          <button class="chip" data-v="Ремонт и отделка">Ремонт и отделка</button>
+          <button class="chip" data-v="Сантехника">Сантехника</button>
+          <button class="chip" data-v="Электрика">Электрика</button>
+          <button class="chip" data-v="Сборка мебели">Сборка мебели</button>
+          <button class="chip" data-v="Клининг">Клининг</button>
+          <button class="chip" data-v="Репетитор">Репетитор</button>
+          <button class="chip" data-v="Ведущий на праздник">Ведущий на праздник</button>
+          <button class="chip" data-v="Другое">Другое</button>
+        </div>
+      </div>
+
+      <div class="pane hidden" data-step="2">
+        <div class="q" id="q2">Что именно?</div>
+        <div class="hint">Мастера спрашивают это первым делом</div>
+        <div class="stack" data-group="detail"></div>
+      </div>
+
+      <div class="pane hidden" data-step="3">
+        <div class="q">Масштаб работы</div>
+        <div class="hint">Помогает мастеру сразу назвать цену</div>
+        <div class="stack" data-group="scope"></div>
+      </div>
+
+      <div class="pane hidden" data-step="4">
+        <div class="q">Сроки и материалы</div>
+        <div class="hint">Ещё три вопроса, которые задают все</div>
+
+        <div class="fld">
+          <label>Когда нужно начать?</label>
+          <div class="chips" data-group="when">
+            <button class="chip" data-v="Сегодня">Сегодня</button>
+            <button class="chip" data-v="На этой неделе">На этой неделе</button>
+            <button class="chip" data-v="В течение месяца">В течение месяца</button>
+            <button class="chip" data-v="Не срочно">Не срочно</button>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>Материалы</label>
+          <div class="chips" data-group="materials">
+            <button class="chip" data-v="Уже куплены">Уже куплены</button>
+            <button class="chip" data-v="Нужна закупка">Нужна закупка</button>
+            <button class="chip" data-v="Нужен совет">Нужен совет</button>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>Ориентир по бюджету</label>
+          <div class="chips" data-group="budget">
+            <button class="chip" data-v="до 5 000 ₽">до 5 000 ₽</button>
+            <button class="chip" data-v="5–15 тыс ₽">5–15 тыс ₽</button>
+            <button class="chip" data-v="15–50 тыс ₽">15–50 тыс ₽</button>
+            <button class="chip" data-v="50 тыс+ ₽">50 тыс+ ₽</button>
+            <button class="chip" data-v="Не знаю">Не знаю</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane hidden" data-step="5">
+        <div class="q">Куда мастерам звонить?</div>
+        <div class="hint">Заявку увидят только исполнители поблизости</div>
+
+        <div class="row">
+          <div class="fld">
+            <label>Ваше имя</label>
+            <input id="fName" placeholder="Как к вам обращаться">
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>Телефон</label>
+          <input id="fPhone" placeholder="+7 ___ ___-__-__">
+        </div>
+
+        <div class="fld">
+          <label>Район</label>
+          <div class="chips" data-group="district">
+            <button class="chip" data-v="Центр">Центр</button>
+            <button class="chip" data-v="Заречный">Заречный</button>
+            <button class="chip" data-v="Сомбатхей">Сомбатхей</button>
+            <button class="chip" data-v="Машиностроитель">Машиностроитель</button>
+            <button class="chip" data-v="Другое">Другое</button>
+          </div>
+        </div>
+
+        <div class="fld">
+          <label>Что-то ещё? <span style="color:#A394A8;font-weight:400">— необязательно</span></label>
+          <textarea id="fExtra" placeholder="Например: нужен доступ к воде, есть парковка во дворе"></textarea>
+          <div class="tip">Обычно сюда пишут то, о чём мастер всё равно спросит</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="foot">
+      <button class="btn ghost hidden" id="back">Назад</button>
+      <button class="btn" id="next" disabled>Далее</button>
+    </div>
+  </div>
+
+  <div id="done" class="hidden">
+    <div class="body">
+      <div class="done-mark">
+        <div class="circle">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2>Заявка готова</h2>
+        <p id="sentTo"></p>
+      </div>
+
+      <div class="brief">
+        <div class="head"><span>Что увидят мастера</span><b>Полная</b></div>
+        <dl id="briefList"></dl>
+      </div>
+
+      <div class="compare">
+        <div class="lbl">Вот в чём отличие</div>
+        <div class="old">«нужен ремонт ванной»</div>
+        <div class="arrow">↓ вместо этого</div>
+        <div class="new" id="compareNew"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <button class="btn" onclick="location.reload()">Заполнить заново</button>
+    </div>
+    <div class="note">Это прототип. Заявка никуда не отправляется — данные остаются в браузере.</div>
+  </div>
+
+</div>
+
+<script>
+const DETAIL = {
+  "Ремонт и отделка": ["Ванная или санузел","Кухня","Одна комната","Вся квартира","Балкон","Потолок или стены"],
+  "Сантехника": ["Протёк кран или труба","Засор","Установить унитаз","Установить раковину","Установить ванну","Заменить трубы"],
+  "Электрика": ["Не работает розетка","Провести новую линию","Заменить щиток","Установить светильник","Нет света в квартире"],
+  "Сборка мебели": ["Кухонный гарнитур","Шкаф","Кровать","Стол и стулья","Детская"],
+  "Клининг": ["После ремонта","Генеральная уборка","Окна","Ковры и мебель","Поддерживающая"],
+  "Репетитор": ["Школьная программа","ЕГЭ или ОГЭ","Иностранный язык","Музыка","Подготовка к школе"],
+  "Ведущий на праздник": ["Свадьба","День рождения","Корпоратив","Детский праздник","Юбилей"],
+  "Другое": ["Опишу сам"]
+};
+const SCOPE = {
+  "Ремонт и отделка": ["До 5 м² — небольшая работа","5–15 м² — одна комната","15–40 м² — большая комната","Вся квартира","Не знаю, нужна оценка"],
+  "Сантехника": ["Мелкая работа до часа","Один прибор","Несколько приборов","Полная замена","Не знаю, нужна оценка"],
+  "Электрика": ["Одна точка","Несколько точек","Вся комната","Вся квартира","Не знаю, нужна оценка"],
+  "Сборка мебели": ["Один предмет","Два-три предмета","Полный комплект","Не знаю, нужна оценка"],
+  "Клининг": ["До 40 м²","40–70 м²","70–120 м²","Больше 120 м²","Не знаю"],
+  "Репетитор": ["Разовое занятие","1–2 раза в неделю","Интенсив к экзамену","Не знаю"],
+  "Ведущий на праздник": ["До 2 часов","2–4 часа","Весь вечер","Выезд за город"],
+  "Другое": ["Небольшая работа","Средняя","Большая","Не знаю, нужна оценка"]
+};
+const NAMES = {1:"Услуга",2:"Что именно",3:"Масштаб",4:"Сроки и материалы",5:"Контакты"};
+
+const ans = {};
+let step = 1;
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+function paint(group, container) {
+  container.innerHTML = "";
+  group.forEach(v => {
+    const b = document.createElement("button");
+    b.className = "opt" + (ans[container.dataset.group] === v ? " on" : "");
+    b.innerHTML = `<span class="dot"></span><span>${v}</span>`;
+    b.onclick = () => { ans[container.dataset.group] = v; paint(group, container); validate(); };
+    container.appendChild(b);
+  });
+}
+
+$$(".chip").forEach(c => {
+  c.onclick = () => {
+    const g = c.parentElement.dataset.group;
+    $$(`[data-group="${g}"] .chip`).forEach(x => x.classList.remove("on"));
+    c.classList.add("on");
+    ans[g] = c.dataset.v;
+    if (g === "service") buildDetail(c.dataset.v);
+    validate();
+  };
+});
+
+function buildDetail(service) {
+  $("#q2").textContent = service === "Другое" ? "Опишите задачу" : "Что именно?";
+  delete ans.detail; delete ans.scope;
+  paint(DETAIL[service] || ["Другое"], $('[data-group="detail"]'));
+  paint(SCOPE[service]  || ["Не знаю"], $('[data-group="scope"]'));
+}
+
+function validate() {
+  const need = {1:["service"],2:["detail"],3:["scope"],4:["when","materials","budget"],5:["district"]};
+  let ok = need[step].every(k => !!ans[k]);
+  if (step === 5) ok = ok && $("#fName").value.trim().length > 0 && $("#fPhone").value.trim().length > 5;
+  const b = $("#next");
+  b.disabled = !ok;
+  b.textContent = step === 5 ? "Отправить мастерам" : "Далее";
+}
+
+["fName","fPhone"].forEach(id => $("#"+id).addEventListener("input", validate));
+
+$("#next").onclick = () => { if (step < 5) { step++; show(); } else finish(); };
+$("#back").onclick = () => { if (step > 1) { step--; show(); } };
+
+function show() {
+  $$(".pane").forEach(p => p.classList.toggle("hidden", +p.dataset.step !== step));
+  $("#fill").style.width = (step / 5 * 100) + "%";
+  $("#stepLbl").textContent = `Шаг ${step} из 5`;
+  $("#stepName").textContent = NAMES[step];
+  $("#back").classList.toggle("hidden", step === 1);
+  $("#hero").classList.toggle("hidden", step > 1);
+  validate();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function finish() {
+  $("#quiz").classList.add("hidden");
+  $("#done").classList.remove("hidden");
+  const rows = [
+    ["Услуга", ans.service],["Что именно", ans.detail],["Масштаб", ans.scope],
+    ["Когда начать", ans.when],["Материалы", ans.materials],["Бюджет", ans.budget],
+    ["Район", ans.district],
+    ["Контакт", `${$("#fName").value.trim()} · ${$("#fPhone").value.trim()}`]
+  ];
+  if ($("#fExtra").value.trim()) rows.push(["Дополнительно", $("#fExtra").value.trim()]);
+  $("#briefList").innerHTML = rows.map(([k,v]) => `<div class="row2"><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  $("#sentTo").textContent = `Заявка уйдёт мастерам поблизости — ${ans.district}`;
+  $("#compareNew").textContent =
+    `${ans.service}: ${ans.detail}. ${ans.scope}. Материалы — ${ans.materials.toLowerCase()}. ` +
+    `Начать — ${ans.when.toLowerCase()}. Бюджет ${ans.budget}.`;
+  window.scrollTo({top:0});
+}
+
+show();
+</script>
+</body>
+</html>

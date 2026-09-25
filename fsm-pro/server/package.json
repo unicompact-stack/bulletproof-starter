@@ -1,0 +1,21 @@
+{
+  "name": "fsm-server",
+  "version": "0.3.0",
+  "private": true,
+  "description": "FSM PRO — сервер, база данных (SQLite) и панель администратора",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "reset": "node src/seed.js --reset",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^5.2.1"
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

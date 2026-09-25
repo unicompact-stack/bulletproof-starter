@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FSM PRO — Панель администратора</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #F4F7FA;
+    color: #1c2530;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: #fff;
+    border-bottom: 1px solid #E3E9EF;
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .logo span { color: #168BEA; }
+  .live {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: #6B7A8C; background: #F4F7FA;
+    padding: 5px 11px; border-radius: 20px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #2CCB70; }
+  .dot.off { background: #E04B4B; }
+  .spacer { flex: 1; }
+  .nav a {
+    color: #6B7A8C; text-decoration: none; font-size: 13px;
+    padding: 7px 12px; border-radius: 8px;
+  }
+  .nav a:hover { background: #F4F7FA; color: #1c2530; }
+  .nav a.on { background: #168BEA; color: #fff; }
+
+  main { max-width: 1240px; margin: 0 auto; padding: 22px 24px 60px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  @media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi {
+    background: #fff; border: 1px solid #E3E9EF; border-radius: 16px;
+    padding: 18px 20px;
+  }
+  .kpi .lbl { font-size: 12.5px; color: #6B7A8C; margin-bottom: 6px; }
+  .kpi .val { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .kpi .sub { font-size: 12px; color: #9AA7B5; margin-top: 4px; }
+  .kpi.blue .val { color: #168BEA; }
+  .kpi.purple .val { color: #9546D8; }
+  .kpi.red .val { color: #E04B4B; }
+  .kpi.green .val { color: #2CCB70; }
+
+  .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #fff; border: 1px solid #E3E9EF; border-radius: 16px;
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .card h3 {
+    margin: 0; padding: 15px 18px; font-size: 14.5px;
+    border-bottom: 1px solid #EEF2F6; display: flex; align-items: center; gap: 10px;
+  }
+  .card h3 .count { color: #9AA7B5; font-weight: 400; }
+  .card .body { padding: 16px 18px; }
+
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid #EEF2F6; }
+  .pill {
+    border: 1px solid #E3E9EF; background: #fff; border-radius: 20px;
+    padding: 6px 13px; font-size: 13px; cursor: pointer; color: #54626F;
+    font-family: inherit;
+  }
+  .pill:hover { background: #F4F7FA; }
+  .pill.on { background: #1c2530; color: #fff; border-color: #1c2530; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
+    color: #9AA7B5; font-weight: 600; padding: 10px 18px; border-bottom: 1px solid #EEF2F6;
+  }
+  td { padding: 12px 18px; border-bottom: 1px solid #F4F7FA; vertical-align: top; }
+  tr.task { cursor: pointer; }
+  tr.task:hover { background: #F8FBFD; }
+  tr.task.sel { background: #EAF4FD; }
+  .t-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .t-meta { font-size: 12px; color: #6B7A8C; }
+  .t-addr { font-size: 12.5px; color: #54626F; }
+  .t-due { font-size: 12.5px; white-space: nowrap; }
+  .t-due.over { color: #E04B4B; font-weight: 600; }
+
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .b-new          { background: #E3F7EC; color: #1B8F4E; }
+  .b-assigned     { background: #F0E9FB; color: #6B32AF; }
+  .b-in_progress  { background: #E4F1FD; color: #0F6FB2; }
+  .b-under_review { background: #F0E9FB; color: #6B32AF; }
+  .b-completed    { background: #E9EDF1; color: #54626F; }
+  .b-overdue      { background: #FDECEC; color: #C33A3A; margin-left: 6px; }
+
+  .who { display: flex; align-items: center; gap: 8px; }
+  .av {
+    width: 26px; height: 26px; border-radius: 50%; flex: 0 0 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+  }
+  .who .nm { font-size: 12.5px; }
+
+  .detail-empty { padding: 40px 20px; text-align: center; color: #9AA7B5; font-size: 13.5px; }
+  .dt-title { font-size: 17px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .dt-addr { color: #6B7A8C; font-size: 13px; margin-bottom: 14px; }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 13px; margin-bottom: 16px; }
+  .kv .k { color: #9AA7B5; }
+  .kv .v { color: #2B3743; }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .btn {
+    border: none; border-radius: 10px; padding: 11px 16px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    background: #168BEA; color: #fff;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.ghost { background: #F4F7FA; color: #2B3743; border: 1px solid #E3E9EF; }
+  .btn.ok { background: #2CCB70; }
+  .btn.purple { background: #9546D8; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li {
+    display: grid; grid-template-columns: 16px 1fr; gap: 10px;
+    padding: 8px 0; font-size: 13px; position: relative;
+  }
+  .timeline li::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: #C9D4DE; margin-top: 5px; margin-left: 4px;
+  }
+  .timeline li .cm { color: #6B7A8C; font-size: 12.5px; }
+  .timeline li .dt { color: #9AA7B5; font-size: 11.5px; }
+
+  .cmt { border-top: 1px solid #EEF2F6; padding: 9px 0; font-size: 13px; }
+  .cmt .a { font-weight: 600; font-size: 12.5px; }
+  .cmt .d { color: #9AA7B5; font-size: 11.5px; margin-left: 6px; font-weight: 400; }
+
+  input[type=text] {
+    width: 100%; padding: 10px 12px; border: 1px solid #E3E9EF;
+    border-radius: 10px; font-size: 13.5px; font-family: inherit; margin-top: 8px;
+  }
+  input[type=text]:focus { outline: none; border-color: #168BEA; }
+
+  .err {
+    background: #FDECEC; color: #C33A3A; border-radius: 10px;
+    padding: 10px 14px; font-size: 13px; margin-bottom: 12px; display: none;
+  }
+  .err.show { display: block; }
+
+  .urow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #F4F7FA; }
+  .urow:last-child { border-bottom: none; }
+  .urow .n { flex: 1; font-size: 13.5px; }
+  .urow .c { font-size: 12px; color: #9AA7B5; font-family: ui-monospace, Menlo, monospace; }
+  .urow .a { font-size: 12px; color: #6B7A8C; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">FSM<span> PRO</span></div>
+  <div class="live"><span class="dot" id="dot"></span><span id="liveText">подключение…</span></div>
+  <div class="spacer"></div>
+  <div class="nav">
+    <a href="/admin" class="on">Админка</a>
+    <a href="/worker">Мастер</a>
+    <a href="/api/health" target="_blank">API</a>
+  </div>
+</header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Задачи <span class="count" id="taskCount"></span></h3>
+        <div class="filters" id="filters"></div>
+        <table>
+          <thead>
+            <tr><th>Задача</th><th>Исполнитель</th><th>Срок</th><th>Статус</th></tr>
+          </thead>
+          <tbody id="tasks"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" id="detailCard">
+        <h3>Карточка задачи</h3>
+        <div class="detail-empty" id="detailEmpty">Выберите задачу слева</div>
+        <div class="body" id="detailBody" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h3>Сотрудники</h3>
+        <div class="body" id="users"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const LABELS = {
+  new: 'Новая', assigned: 'Назначена', in_progress: 'В работе',
+  under_review: 'На проверке', completed: 'Завершена'
+};
+const ORDER = ['new', 'assigned', 'in_progress', 'under_review', 'completed'];
+
+// Допустимые переходы — зеркалят серверную таблицу.
+const TRANSITIONS = {
+  new: ['assigned'],
+  assigned: ['in_progress', 'new'],
+  in_progress: ['under_review'],
+  under_review: ['completed', 'in_progress'],
+  completed: []
+};
+const ACTION = {
+  'assigned': 'Назначить', 'in_progress': 'Взять в работу',
+  'under_review': 'Отправить на проверку', 'completed': 'Принять',
+  'new': 'Снять назначение'
+};
+
+const state = { tasks: [], users: [], selected: null, filter: 'all', me: 'u-mgr' };
+const $ = (id) => document.getElementById(id);
+
+const API = ''; // относительные пути — работает и в песочнице, и локально
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(body.error || ('HTTP ' + r.status));
+  }
+  return r.json();
+}
+
+const colorOf = (name) => {
+  const palette = ['#168BEA', '#2CCB70', '#9546D8', '#E08A3C', '#3AA8A0', '#C2557A'];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length];
+};
+const initials = (n) => n.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+const fmtDate = (s) => {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) +
+         ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+function renderKpis(stats) {
+  const cards = [
+    { cls: 'blue',   lbl: 'В работе',        val: stats.byStatus.in_progress, sub: 'задач сейчас' },
+    { cls: 'purple', lbl: 'На проверке',     val: stats.byStatus.under_review, sub: 'ждут решения' },
+    { cls: 'red',    lbl: 'Просрочено',      val: stats.overdue, sub: 'срок вышел' },
+    { cls: 'green',  lbl: 'Мастеров',        val: stats.technicians, sub: 'активных' }
+  ];
+  $('kpis').innerHTML = cards.map((c) => `
+    <div class="kpi ${c.cls}">
+      <div class="lbl">${c.lbl}</div>
+      <div class="val">${c.val}</div>
+      <div class="sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderFilters() {
+  const opts = [{ k: 'all', l: 'Все' }]
+    .concat(ORDER.map((s) => ({ k: s, l: LABELS[s] })))
+    .concat([{ k: 'overdue', l: 'Просроченные' }]);
+  $('filters').innerHTML = opts.map((o) => {
+    const n = o.k === 'all' ? state.tasks.length
+      : o.k === 'overdue' ? state.tasks.filter((t) => t.isOverdue).length
+      : state.tasks.filter((t) => t.status === o.k).length;
+    return `<button class="pill ${state.filter === o.k ? 'on' : ''}" data-f="${o.k}">${o.l} · ${n}</button>`;
+  }).join('');
+  $('filters').querySelectorAll('[data-f]').forEach((b) =>
+    b.onclick = () => { state.filter = b.dataset.f; renderFilters(); renderTasks(); });
+}
+
+function visibleTasks() {
+  if (state.filter === 'all') return state.tasks;
+  if (state.filter === 'overdue') return state.tasks.filter((t) => t.isOverdue);
+  return state.tasks.filter((t) => t.status === state.filter);
+}
+
+function renderTasks() {
+  const rows = visibleTasks();
+  $('taskCount').textContent = `· ${rows.length}`;
+  $('tasks').innerHTML = rows.map((t) => `
+    <tr class="task ${state.selected === t.id ? 'sel' : ''}" data-id="${t.id}">
+      <td>
+        <div class="t-title">${esc(t.title)}</div>
+        <div class="t-addr">${esc(t.address || '—')}</div>
+        <div class="t-meta">${esc(t.customer_name || '')}</div>
+      </td>
+      <td>${t.assignee
+        ? `<div class="who"><div class="av" style="background:${colorOf(t.assignee.full_name)}">${initials(t.assignee.full_name)}</div><span class="nm">${esc(t.assignee.full_name)}</span></div>`
+        : '<span class="t-meta">не назначен</span>'}</td>
+      <td class="t-due ${t.isOverdue ? 'over' : ''}">${fmtDate(t.due_at)}${t.isOverdue ? ' · просрочено' : ''}</td>
+      <td><span class="badge b-${t.status}">${LABELS[t.status]}</span>${t.isOverdue ? '<span class="badge b-overdue">!</span>' : ''}</td>
+    </tr>`).join('');
+  $('tasks').querySelectorAll('[data-id]').forEach((tr) =>
+    tr.onclick = () => selectTask(tr.dataset.id));
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function selectTask(id) {
+  state.selected = id;
+  renderTasks();
+  try {
+    const t = await api('/api/tasks/' + encodeURIComponent(id));
+    renderDetail(t);
+  } catch (e) {
+    $('detailBody').innerHTML = `<div class="err show">${esc(e.message)}</div>`;
+    $('detailBody').style.display = 'block';
+    $('detailEmpty').style.display = 'none';
+  }
+}
+
+function renderDetail(t) {
+  $('detailEmpty').style.display = 'none';
+  $('detailBody').style.display = 'block';
+
+  const next = TRANSITIONS[t.status] || [];
+  const buttons = next.length
+    ? next.map((s) => `<button class="btn ${s === 'completed' ? 'ok' : s === 'in_progress' && t.status === 'under_review' ? 'purple' : ''}" data-to="${s}">${ACTION[s] || LABELS[s]}</button>`).join('')
+    : '<span class="t-meta">Конечный статус — переходов нет</span>';
+
+  $('detailBody').innerHTML = `
+    <div class="dt-title">${esc(t.title)}</div>
+    <div class="dt-addr">${esc(t.address || 'Адрес не указан')}</div>
+
+    <div class="kv">
+      <div class="k">Статус</div><div class="v"><span class="badge b-${t.status}">${LABELS[t.status]}</span>${t.isOverdue ? '<span class="badge b-overdue">просрочено</span>' : ''}</div>
+      <div class="k">Заказчик</div><div class="v">${esc(t.customer_name || '—')}</div>
+      <div class="k">Телефон</div><div class="v">${esc(t.customer_phone || '—')}</div>
+      <div class="k">Исполнитель</div><div class="v">${t.assignee ? esc(t.assignee.full_name) : 'не назначен'}</div>
+      <div class="k">Срок</div><div class="v ${t.isOverdue ? '' : ''}">${fmtDate(t.due_at)}</div>
+    </div>
+
+    <div style="font-size:12.5px;color:#6B7A8C;margin-bottom:14px">${esc(t.description || '')}</div>
+
+    <div class="err" id="dErr"></div>
+    <div class="actions">${buttons}</div>
+
+    <input type="text" id="cBody" placeholder="Комментарий к задаче…">
+    <div style="margin-top:8px"><button class="btn ghost" id="cSend">Добавить комментарий</button></div>
+
+    <h4 style="margin:20px 0 8px;font-size:13px;color:#9AA7B5;text-transform:uppercase;letter-spacing:.05em">История</h4>
+    <ul class="timeline">
+      ${(t.history || []).map((h) => `
+        <li><div></div><div>
+          <div>${esc(h.actionLabel || LABELS[h.to_status])}${h.actor_name ? ' · ' + esc(h.actor_name) : ''}</div>
+          <div class="cm">${esc(h.comment || '')}</div>
+          <div class="dt">${fmtDate(h.created_at)}</div>
+        </div></li>`).join('')}
+    </ul>
+
+    <h4 style="margin:18px 0 6px;font-size:13px;color:#9AA7B5;text-transform:uppercase;letter-spacing:.05em">Комментарии</h4>
+    ${(t.comments || []).map((c) => `
+      <div class="cmt"><span class="a">${esc(c.author_name || '—')}</span><span class="d">${fmtDate(c.created_at)}</span>
+      <div>${esc(c.body)}</div></div>`).join('') || '<div class="t-meta">Комментариев нет</div>'}
+  `;
+
+  $('detailBody').querySelectorAll('[data-to]').forEach((b) =>
+    b.onclick = () => changeStatus(t.id, b.dataset.to));
+  $('cSend').onclick = () => addComment(t.id);
+}
+
+async function changeStatus(id, to) {
+  const err = $('dErr');
+  err.classList.remove('show');
+  try {
+    await api('/api/tasks/' + encodeURIComponent(id) + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: to, actorId: state.me })
+    });
+    await Promise.all([loadTasks(), selectTask(id)]);
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+  }
+}
+
+async function addComment(id) {
+  const inp = $('cBody');
+  const body = inp.value.trim();
+  if (!body) return;
+  await api('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskId: id, authorId: state.me, body })
+  });
+  inp.value = '';
+  await selectTask(id);
+}
+
+function renderUsers() {
+  $('users').innerHTML = state.users.map((u) => `
+    <div class="urow">
+      <div class="av" style="background:${colorOf(u.full_name)}">${initials(u.full_name)}</div>
+      <div class="n">${esc(u.full_name)}<div class="a">${u.role === 'manager' ? 'Руководитель' : 'Мастер'} · ${u.active_tasks} в работе</div></div>
+      <div class="c">${esc(u.code)}</div>
+    </div>`).join('');
+}
+
+async function loadTasks() {
+  state.tasks = await api('/api/tasks');
+  if (state.selected && !state.tasks.find((t) => t.id === state.selected)) {
+    state.selected = null;
+    $('detailBody').style.display = 'none';
+    $('detailEmpty').style.display = 'block';
+  }
+}
+async function loadUsers() { state.users = await api('/api/users'); }
+
+async function refresh() {
+  try {
+    const stats = await api('/api/stats');
+    await loadTasks();
+    await loadUsers();
+    renderKpis(stats);
+    renderFilters();
+    renderTasks();
+    renderUsers();
+    if (state.selected) {
+      // Не перерисовываем карточку, пока пользователь печатает комментарий —
+      // иначе каждые 5 секунд polling будет стирать недописанный текст.
+      const typing = document.activeElement && document.activeElement.id === 'cBody';
+      if (!typing) {
+        const t = await api('/api/tasks/' + encodeURIComponent(state.selected));
+        renderDetail(t);
+      }
+    }
+    $('dot').className = 'dot';
+    $('liveText').textContent = 'база на сервере · обновлено ' + new Date().toLocaleTimeString('ru-RU');
+  } catch (e) {
+    $('dot').className = 'dot off';
+    $('liveText').textContent = 'нет связи: ' + e.message;
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

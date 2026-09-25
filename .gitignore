@@ -1,0 +1,22 @@
+# Nested git repos (cloned sources)
+**/.git
+**/.git_backup
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Obsidian
+.obsidian/
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.pid
