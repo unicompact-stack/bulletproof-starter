@@ -3,8 +3,8 @@
 // Никакой «оценки качества текста» здесь нет: только то, что проверяется однозначно.
 
 import { nowISO, daysSince, isFresh } from './util.js';
-import { loadBanksConfig } from './bank.js';
-import { loadDisclaimers, loadStopwords } from './config.js';
+import { loadSubjectsConfig } from './subject.js';
+import { loadDisclaimers, loadRubrics, loadStopwords } from './config.js';
 import { lastPublished } from './history.js';
 
 const DATE_RE = /\d{2}\.\d{2}\.\d{4}/;
@@ -12,11 +12,15 @@ const NUMBER_RE = /(\d+(?:[.,]\d+)?\s*%|\d[\d\s]{2,}₽)/;
 
 /**
  * @param {Object} post пост из generate.js
- * @param {Object} [options] { ttlDays }
+ * @param {Object} [options] { ttlDays, maxLength, profile }
+ *   maxLength — самый строгий лимит среди включённых площадок; если текст длиннее,
+ *   это не «свернётся», а площадка его не примет — поэтому ошибка, а не предупреждение.
  * @returns {{status: string, errors: Array, warnings: Array, notes: Array, checked_at: string}}
  */
 export function runChecks(post, options = {}) {
   const ttlDays = options.ttlDays ?? 30;
+  const maxLength = options.maxLength ?? null;
+  const profile = options.profile ?? post.profile ?? null;
   const errors = [];
   const warnings = [];
   const notes = [];
@@ -29,7 +33,7 @@ export function runChecks(post, options = {}) {
       id: 'needs-data',
       message:
         `Нет обязательных фактов для рубрики «${post.rubric_name ?? post.rubric}»: ` +
-        `${post.missing_required.join(', ')}. Сначала собери данные: npm run fetch -- --bank ${post.bank_id}`,
+        `${post.missing_required.join(', ')}. Сначала собери данные: npm run fetch -- --subject ${post.subject_id}`,
     });
   }
 
@@ -82,8 +86,25 @@ export function runChecks(post, options = {}) {
     });
   }
 
+  // 3в. Задвоенные пары слов: «в месяц в месяц» — следы склейки шаблона и значения факта.
+  // Работаем по словам, а не по регулярке: предлоги односложные, и регулярка на словах от 2 букв
+  // такую пару не поймает.
+  const words = text.toLowerCase().match(/[а-яёa-z0-9]+/gi) ?? [];
+  const doubledPairs = [];
+  for (let i = 0; i + 3 < words.length; i += 1) {
+    const samePair = words[i] === words[i + 2] && words[i + 1] === words[i + 3];
+    const longEnough = words[i].length + words[i + 1].length >= 4;
+    if (samePair && longEnough) doubledPairs.push(`${words[i]} ${words[i + 1]}`);
+  }
+  if (doubledPairs.length) {
+    warnings.push({
+      id: 'double-phrase',
+      message: `Повторяется фраза: ${[...new Set(doubledPairs)].join(', ')}`,
+    });
+  }
+
   // 4. Стоп-слова: обещания, которые нельзя давать
-  const stopwords = loadStopwords();
+  const stopwords = loadStopwords(profile);
   const lower = text.toLowerCase();
   for (const phrase of stopwords.block ?? []) {
     if (lower.includes(phrase.toLowerCase())) {
@@ -112,8 +133,8 @@ export function runChecks(post, options = {}) {
   // 6. Ссылки
   const urls = [...text.matchAll(/https?:\/\/[^\s)]+/g)].map((match) => match[0]);
   if (urls.length) {
-    const allowedHosts = loadBanksConfig()
-      .banks.flatMap((bank) => [bank.link, bank.help_link])
+    const allowedHosts = loadSubjectsConfig(profile)
+      .subjects.flatMap((subject) => [subject.link, subject.help_link])
       .filter(Boolean)
       .map((url) => {
         try {
@@ -134,7 +155,7 @@ export function runChecks(post, options = {}) {
     if (strange.length) {
       warnings.push({
         id: 'unknown-link-domain',
-        message: `Ссылка на сторонний домен: ${strange.join(', ')} — проверь, что это сайт банка`,
+        message: `Ссылка на сторонний домен: ${strange.join(', ')} — проверь, что это сайт из profiles/*/subjects.json`,
       });
     }
     warnings.push({
@@ -170,7 +191,7 @@ export function runChecks(post, options = {}) {
   }
 
   // 9. Дисклеймер для типа продукта
-  const disclaimers = loadDisclaimers();
+  const disclaimers = loadDisclaimers(profile);
   const disclaimer = disclaimers[post.disclaimer_kind];
   if (disclaimer?.required && disclaimer.text && !text.includes(disclaimer.text)) {
     errors.push({
@@ -180,13 +201,13 @@ export function runChecks(post, options = {}) {
   }
 
   // 10. Повтор: не публиковали ли такое недавно
-  const last = lastPublished(post.bank_id, post.rubric);
+  const last = lastPublished(post.subject_id, post.rubric, profile);
   if (last) {
     const days = daysSince(String(last.at).slice(0, 10));
     if (days !== null && days < 7) {
       warnings.push({
         id: 'recent-duplicate',
-        message: `Пост про «${post.bank_name} / ${post.rubric_name}» выходил ${days} дн. назад — не части с читателя`,
+        message: `Пост про «${post.subject_name} / ${post.rubric_name}» выходил ${days} дн. назад — не части с читателя`,
       });
     }
   }
@@ -195,18 +216,25 @@ export function runChecks(post, options = {}) {
   if (post.ads && !/реклама/i.test(text)) {
     errors.push({ id: 'ads-marking', message: 'Пост помечен как реклама, но маркировки «Реклама» в тексте нет' });
   }
-  if (!post.ads && post.rubric === 'akciya') {
+  // Флаг ads_check ставится в рубрике профиля: платные рубрики у каждой тематики свои
+  const rubricConfig = loadRubrics(profile).find((item) => item.id === post.rubric);
+  if (!post.ads && rubricConfig?.ads_check) {
     warnings.push({
       id: 'ads-check',
-      message: 'Если пост оплачен банком, нужна маркировка рекламы и ERID — проверь перед публикацией',
+      message: `Рубрика «${post.rubric_name ?? post.rubric}» обычно платная: нужна маркировка рекламы и ERID — проверь перед публикацией`,
     });
   }
 
-  // 12. Длина
+  // 12. Длина: лимит площадки — ошибка, длинный пост в соцсети — предупреждение
   if (text.length < 200) {
     errors.push({ id: 'too-short', message: `Текст ${text.length} символов — для поста это слишком мало` });
+  } else if (maxLength && text.length > maxLength) {
+    errors.push({
+      id: 'channel-too-long',
+      message: `Текст ${text.length} символов длиннее лимита площадки (${maxLength}) — площадка его не примет`,
+    });
   } else if (text.length > 2600) {
-    warnings.push({ id: 'too-long', message: `Текст ${text.length} символов — ВК свернёт пост под «Показать полностью»` });
+    warnings.push({ id: 'too-long', message: `Текст ${text.length} символов — площадка свернёт пост под «Показать полностью»` });
   }
 
   const status = errors.length ? 'blocked' : warnings.length ? 'warn' : 'ok';

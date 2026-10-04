@@ -1,11 +1,10 @@
-// Сборка поста: банк + рубрика + тема журнала + факты -> готовый текст.
-// Пока без ИИ: текст собирается по шаблонам (templates/) и каркасу (config/bodies.json).
+// Сборка поста: объект тематики + рубрика + тема журнала + факты -> готовый текст.
+// Пока без ИИ: текст собирается по шаблонам профиля и каркасу (bodies.json).
 // ИИ подключается позже и заменяет только «формулировки», факты остаются те же.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  resolvePath,
   readJson,
   readText,
   writeText,
@@ -14,22 +13,35 @@ import {
   nowISO,
   slugify,
 } from './util.js';
-import { findBank, loadFacts, factsForRubric } from './bank.js';
-import { loadBodies, loadDisclaimers, loadHooks, loadRubrics } from './config.js';
+import { findSubject, loadFacts, factsForRubric } from './subject.js';
+import { loadBodies, loadDisclaimers, loadHooks, loadProfile, loadRubrics } from './config.js';
+import { profilePaths, resolveProfileId } from './profile.js';
 import { readHistory, appendHistory } from './history.js';
 import { render } from './render.js';
 import { runChecks } from './checks.js';
+import { strictestMaxLength } from './channels/index.js';
 
-export const QUEUE_DIR = resolvePath('queue');
-export const JOURNAL_DIR = resolvePath('knowledge', 'journal');
-export const TEMPLATES_DIR = resolvePath('templates');
-
-// Загрузчики конфигов живут в config.js, здесь только переэкспорт для удобства.
 export { loadBodies, loadDisclaimers, loadHooks, loadRubrics, loadStopwords } from './config.js';
+export { readHistory, appendHistory } from './history.js';
 
-/** Определить рубрику по тексту команды («пост про карты») или по банку */
-export function detectRubric(text, banks = []) {
-  const rubrics = loadRubrics();
+export function queueDir(profile = null) {
+  return profilePaths(profile).queue;
+}
+
+export function journalDir(profile = null) {
+  return profilePaths(profile).journal;
+}
+
+export function templatesDir(profile = null) {
+  return profilePaths(profile).templates;
+}
+
+/**
+ * Определить рубрику по тексту команды («пост про карты»).
+ * Возвращает null, если подходящей рубрики нет: лучше спросить, чем угадать.
+ */
+export function detectRubric(text, profile = null) {
+  const rubrics = loadRubrics(profile);
   const haystack = String(text ?? '').toLowerCase();
   if (haystack) {
     const scored = rubrics
@@ -47,15 +59,16 @@ export function detectRubric(text, banks = []) {
   return null;
 }
 
-/** Темы журнала: читаем markdown-файлы с front-matter */
-export function loadTopics() {
-  if (!fs.existsSync(JOURNAL_DIR)) return [];
+/** Темы журнала профиля: markdown-файлы с front-matter */
+export function loadTopics(profile = null) {
+  const dir = journalDir(profile);
+  if (!fs.existsSync(dir)) return [];
   return fs
-    .readdirSync(JOURNAL_DIR)
+    .readdirSync(dir)
     .filter((file) => file.endsWith('.md'))
     .sort()
     .map((file) => {
-      const raw = readText(path.join(JOURNAL_DIR, file), '');
+      const raw = readText(path.join(dir, file), '');
       const front = /^---\n([\s\S]*?)\n---/.exec(raw);
       const meta = {};
       if (front) {
@@ -76,7 +89,7 @@ export function loadTopics() {
       }
       return {
         file,
-        file_path: path.join(JOURNAL_DIR, file),
+        file_path: path.join(dir, file),
         topic_id: meta.topic_id ?? slugify(file.replace(/\.md$/, '')),
         title: meta.title ?? file,
         rubrics: Array.isArray(meta.rubrics) ? meta.rubrics : [],
@@ -86,11 +99,9 @@ export function loadTopics() {
     });
 }
 
-export { readHistory, appendHistory } from './history.js';
-
-/** Тема журнала для рубрики: та, что дольше всех не использовалась */
-export function pickTopic(rubricId, requestedTopicId = null) {
-  const topics = loadTopics();
+/** Тема журнала для рубрики: самая подходящая и наименее использованная */
+export function pickTopic(rubricId, requestedTopicId = null, { profile = null } = {}) {
+  const topics = loadTopics(profile);
   if (requestedTopicId) {
     const exact = topics.find((topic) => topic.topic_id === requestedTopicId);
     if (exact) return exact;
@@ -98,7 +109,7 @@ export function pickTopic(rubricId, requestedTopicId = null) {
   const matching = topics.filter((topic) => (topic.rubrics ?? []).includes(rubricId));
   const pool = matching.length ? matching : topics;
   if (!pool.length) return null;
-  const history = readHistory();
+  const history = readHistory(profile);
   const lastUsed = (topic) => {
     const records = history.filter((record) => record.topic_id === topic.topic_id);
     if (!records.length) return -1;
@@ -117,17 +128,17 @@ export function pickTopic(rubricId, requestedTopicId = null) {
 
 /**
  * Подставить значения фактов в формулировки вида «Кэшбэк до {cashback_rate}».
- * Синтаксис с одним слэшем — для строк из config/, с двумя ({{...}}) — для файлов templates/.
+ * Синтаксис с одним слэшем — для строк из профиля, с двумя ({{...}}) — для файлов шаблонов.
  * Если факта нет, плейсхолдер остаётся в тексте: проверка это заметит и заблокирует пост.
  */
 function fillFacts(text, available) {
-  return String(text ?? '').replace(/\{([\w.]+)\}/g, (whole, key) =>
-    available[key] !== undefined ? String(available[key]) : whole,
-  );
+  return String(text ?? '')
+    .replace(/\{\{([\w.]+)\}\}/g, (whole, key) => (available[key] !== undefined ? String(available[key]) : whole))
+    .replace(/\{([\w.]+)\}/g, (whole, key) => (available[key] !== undefined ? String(available[key]) : whole));
 }
 
 function placeholdersIn(text) {
-  return [...String(text ?? '').matchAll(/\{([\w.]+)\}/g)].map((m) => m[1]);
+  return [...String(text ?? '').matchAll(/\{\{?([\w.]+)\}\}?/g)].map((match) => match[1]);
 }
 
 function rotate(list, variant) {
@@ -152,7 +163,7 @@ function displayDate(iso) {
 /**
  * Собрать пост.
  * @param {Object} options
- * @param {string} options.bank название, id или псевдоним банка
+ * @param {string} options.subject название, id или псевдоним объекта тематики
  * @param {string} [options.rubric] id рубрики, если не указана — определяется по тексту
  * @param {string} [options.text] текст команды («размести пост про карты»)
  * @param {string} [options.topic] id темы журнала
@@ -162,7 +173,8 @@ function displayDate(iso) {
  */
 export function buildPost(options = {}) {
   const {
-    bank: bankQuery,
+    subject: subjectQuery,
+    bank: bankQuery, // старое имя — чтобы старые вызовы и скрипты не ломались
     rubric: rubricId = null,
     text = '',
     topic: topicId = null,
@@ -170,20 +182,31 @@ export function buildPost(options = {}) {
     ttlDays = 30,
     note = null,
     dryRun = false,
+    profile = null,
   } = options;
 
-  const bank = findBank(bankQuery);
-  if (!bank) throw new Error(`Банк не найден: «${bankQuery}». Список — config/banks.json`);
+  const active = loadProfile(profile);
+  const query = subjectQuery ?? bankQuery;
+  const subject = findSubject(query, profile);
+  if (!subject) {
+    throw new Error(
+      `${active.subject_label} не найден: «${query}». Список — profiles/${active.id}/subjects.json`,
+    );
+  }
 
-  const rubrics = loadRubrics();
-  const rubric = (rubricId ? rubrics.find((item) => item.id === rubricId) : null) ?? detectRubric(text);
-  if (!rubric) throw new Error('Не понял рубрику. Укажи: --rubric karta|kreditka|vklad|akciya|novost');
+  const rubrics = loadRubrics(profile);
+  const rubric = (rubricId ? rubrics.find((item) => item.id === rubricId) : null) ?? detectRubric(text, profile);
+  if (!rubric) {
+    throw new Error(
+      `Не понял рубрику. Укажи: --rubric ${rubrics.map((item) => item.id).join('|')}`,
+    );
+  }
 
-  const topic = pickTopic(rubric.id, topicId);
-  const hooksConfig = loadHooks()[rubric.id] ?? {};
-  const bodies = loadBodies()[rubric.id] ?? {};
-  const disclaimers = loadDisclaimers();
-  const factsData = loadFacts(bank.id);
+  const topic = pickTopic(rubric.id, topicId, { profile });
+  const hooksConfig = loadHooks(profile)[rubric.id] ?? {};
+  const bodies = loadBodies(profile)[rubric.id] ?? {};
+  const disclaimers = loadDisclaimers(profile);
+  const factsData = loadFacts(subject.id, profile);
 
   const available = {};
   for (const key of Object.keys(factsData.facts ?? {})) {
@@ -197,7 +220,9 @@ export function buildPost(options = {}) {
     available,
     variant,
   );
-  if (!hookPattern) throw new Error(`Нет ни одного шаблона хука для рубрики «${rubric.id}» (config/hooks.json)`);
+  if (!hookPattern) {
+    throw new Error(`Нет ни одного шаблона хука для рубрики «${rubric.id}» (profiles/${active.id}/hooks.json)`);
+  }
 
   const hookText = fillFacts(hookPattern.text, available);
   const ctaText = ctaPattern ? fillFacts(ctaPattern.text, available) : '';
@@ -205,7 +230,7 @@ export function buildPost(options = {}) {
 
   const allParagraphs = bodies.paragraphs ?? [];
   const usableParagraphs = allParagraphs.filter((paragraph) =>
-    placeholdersIn(paragraph).every((key) => available[key] !== undefined || key === 'bank_name'),
+    placeholdersIn(paragraph).every((key) => available[key] !== undefined || key === 'subject_name'),
   );
   const bodyParagraphs = rotate(usableParagraphs, variant)
     .slice(0, 3)
@@ -217,10 +242,11 @@ export function buildPost(options = {}) {
     ...placeholdersIn([hookPattern.text, ctaPattern?.text, bodies.lead, ...bodyParagraphs].join(' ')),
   ]);
 
-  const factEntries = factsForRubric(bank.id, rubric.id, {
+  const factEntries = factsForRubric(subject.id, rubric.id, {
     required: rubric.required_facts ?? [],
     extra: [...usedKeys],
     ttlDays,
+    profile,
   });
 
   const facts = factEntries.map((fact) => {
@@ -239,12 +265,12 @@ export function buildPost(options = {}) {
 
   const disclaimerConfig = disclaimers[rubric.disclaimer] ?? null;
   const disclaimer = disclaimerConfig?.text ?? '';
-  const hashtags = (bank.hashtags ?? []).join(' ');
+  const hashtags = (subject.hashtags ?? []).join(' ');
 
-  const templatePath = path.join(TEMPLATES_DIR, rubric.template ?? 'karta.md');
-  const template = readText(templatePath, '# {{bank_name}}\n\n{{hook}}\n\n{{#facts}}\n{{line}}\n{{/facts}}\n');
+  const templatePath = path.join(templatesDir(profile), rubric.template ?? `${rubric.id}.md`);
+  const template = readText(templatePath, '# {{subject_name}}\n\n{{hook}}\n\n{{#facts}}\n{{line}}\n{{/facts}}\n');
   const rendered = render(template, {
-    bank_name: bank.name,
+    subject_name: subject.name,
     hook: hookText,
     lead: leadText,
     cta: ctaText,
@@ -254,16 +280,18 @@ export function buildPost(options = {}) {
     body: bodyParagraphs,
   });
 
-  const id = `${todayISO()}-${bank.id}-${rubric.id}`;
+  const id = `${todayISO()}-${subject.id}-${rubric.id}`;
   const post = {
     id,
     created: nowISO(),
+    profile: active.id,
     variant,
     note: note ?? null,
     status: 'draft',
-    bank_id: bank.id,
-    bank_name: bank.name,
-    bank_link: bank.link,
+    subject_id: subject.id,
+    subject_name: subject.name,
+    subject_link: subject.link,
+    subject_label: active.subject_label,
     rubric: rubric.id,
     rubric_name: rubric.name,
     topic_id: topic?.topic_id ?? null,
@@ -277,37 +305,42 @@ export function buildPost(options = {}) {
     missing_required: missingRequired,
     missing_placeholders: rendered.missing,
     disclaimer_kind: rubric.disclaimer,
-    hashtags: bank.hashtags ?? [],
+    hashtags: subject.hashtags ?? [],
     ads: false,
   };
 
-  post.checks = runChecks(post);
+  post.checks = runChecks(post, { ttlDays, maxLength: strictestMaxLength() });
 
   if (post.missing_required.length) post.status = 'needs-data';
   else if (post.checks.errors.length) post.status = 'blocked';
   else post.status = 'ready';
 
   if (!dryRun) {
-    savePost(post);
-    appendHistory({
-      kind: 'generated',
-      id: post.id,
-      bank_id: post.bank_id,
-      rubric: post.rubric,
-      topic_id: post.topic_id,
-      variant,
-      at: post.created,
-    });
+    savePost(post, { profile });
+    appendHistory(
+      {
+        kind: 'generated',
+        id: post.id,
+        profile: active.id,
+        subject_id: post.subject_id,
+        rubric: post.rubric,
+        topic_id: post.topic_id,
+        variant,
+        at: post.created,
+      },
+      profile,
+    );
   }
   return post;
 }
 
-export function postFile(id) {
-  return path.join(QUEUE_DIR, `${id}.json`);
+export function postFile(id, profile = null) {
+  return path.join(queueDir(profile), `${id}.json`);
 }
 
-export function savePost(post, { replace = true } = {}) {
-  const file = postFile(post.id);
+export function savePost(post, { replace = true, profile = null } = {}) {
+  const activeProfile = profile ?? post.profile ?? null;
+  const file = postFile(post.id, activeProfile);
   const draft = { ...post, saved_at: nowISO() };
   if (!replace && fs.existsSync(file)) {
     const suffix = Date.now().toString(36).slice(-4);
@@ -317,36 +350,37 @@ export function savePost(post, { replace = true } = {}) {
   return draft;
 }
 
-export function loadPost(id) {
-  return readJson(postFile(id), null);
+export function loadPost(id, profile = null) {
+  return readJson(postFile(id, profile), null);
 }
 
-export function listPosts({ limit = 20 } = {}) {
-  if (!fs.existsSync(QUEUE_DIR)) return [];
+export function listPosts({ limit = 20, profile = null } = {}) {
+  const dir = queueDir(profile);
+  if (!fs.existsSync(dir)) return [];
   const files = fs
-    .readdirSync(QUEUE_DIR)
+    .readdirSync(dir)
     .filter((file) => file.endsWith('.json'))
     .sort()
     .reverse();
   const posts = [];
   for (const file of files.slice(0, limit)) {
-    const post = readJson(path.join(QUEUE_DIR, file), null);
+    const post = readJson(path.join(dir, file), null);
     if (post) posts.push(post);
   }
   return posts;
 }
 
 /** Повторная проверка готового поста (после ручной правки текста) */
-export function recheckPost(post) {
-  const checked = { ...post, checks: runChecks(post) };
+export function recheckPost(post, { profile = null, maxLength } = {}) {
+  const checked = { ...post, checks: runChecks(post, { maxLength: maxLength ?? strictestMaxLength() }) };
   if (post.missing_required?.length) checked.status = 'needs-data';
   else if (checked.checks.errors.length) checked.status = 'blocked';
   else checked.status = 'ready';
   return checked;
 }
 
-export function checksSummary() {
-  const posts = listPosts({ limit: 50 });
+export function checksSummary({ profile = null } = {}) {
+  const posts = listPosts({ limit: 50, profile });
   const byStatus = posts.reduce((acc, post) => {
     acc[post.status] = (acc[post.status] ?? 0) + 1;
     return acc;
@@ -356,7 +390,7 @@ export function checksSummary() {
     by_status: byStatus,
     posts: posts.slice(0, 10).map((post) => ({
       id: post.id,
-      bank_name: post.bank_name,
+      subject_name: post.subject_name,
       rubric_name: post.rubric_name,
       status: post.status,
       created: post.created,
@@ -369,12 +403,15 @@ export function checksSummary() {
 export function parseGenerateArgs(argv) {
   const args = parseArgs(argv);
   return {
-    bankQuery: args.bank ?? args._[0],
+    subjectQuery: args.subject ?? args.bank ?? args._[0],
     rubricId: args.rubric ?? null,
     text: args._.slice(1).join(' ') || args.text || '',
     topicId: args.topic ?? null,
     variant: Number.parseInt(args.variant ?? '0', 10) || 0,
     ttlDays: Number.parseInt(args.ttl ?? '30', 10) || 30,
     note: args.note ?? null,
+    profile: args.profile ?? null,
   };
 }
+
+export { resolveProfileId };

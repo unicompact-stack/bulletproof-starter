@@ -1,10 +1,13 @@
-// Сбор фактов со страниц банков.
+// Сбор фактов со страниц объектов тематики.
 // Онлайн: настоящие запросы. Офлайн (--offline): разбор фикстур из test/fixtures —
 // так парсер проверяется без интернета.
+//
+// Как разбирать страницу, решает экстрактор профиля (src/extractors/), а не этот модуль.
 
-import { resolvePath, readText, writeText } from './util.js';
-import { listBanks, findBank, mergeFacts, loadBanksConfig } from './bank.js';
-import { factsFromHtml } from './parse.js';
+import { readText, writeText, envInt } from './util.js';
+import { listSubjects, findSubject, mergeFacts, loadSubjectsConfig } from './subject.js';
+import { getExtractor } from './extractors/index.js';
+import { loadProfile, profilePaths } from './profile.js';
 
 /** Скачать страницу текстом */
 export async function fetchHtml(url, { timeoutMs = 15000, userAgent = 'Mozilla/5.0' } = {}) {
@@ -31,13 +34,14 @@ export async function fetchHtml(url, { timeoutMs = 15000, userAgent = 'Mozilla/5
 }
 
 /** Разобрать одну страницу-источник: онлайн или из фикстуры */
-async function collectSource(bank, source, { offline, timeoutMs, userAgent }) {
+async function collectSource(subject, source, { offline, timeoutMs, userAgent, extractor, profile }) {
+  const paths = profilePaths(profile);
   let html = null;
   let from = 'live';
 
   if (offline) {
-    const fixture = resolvePath('test', 'fixtures', 'banks', source.fixture ?? '');
-    html = readText(fixture);
+    const fixture = paths.fixtures ?? `${paths.dir}/../../test/fixtures/${profile?.id ?? 'banks'}`;
+    html = readText(`${fixture}/${source.fixture ?? ''}`);
     from = 'fixture';
     if (!html) {
       return { source_id: source.id, url: source.url, status: 'skipped', reason: 'нет фикстуры для офлайн-режима' };
@@ -47,12 +51,12 @@ async function collectSource(bank, source, { offline, timeoutMs, userAgent }) {
   }
 
   // кэш последней загрузки — пригодится при разборе ошибок парсера
-  writeText(resolvePath('data', 'cache', `${bank.id}-${source.id}.html`), html);
+  writeText(`${paths.cache}/${subject.id}-${source.id}.html`, html);
 
   let facts = {};
   let parseError = null;
   try {
-    facts = factsFromHtml(html, source);
+    facts = extractor.factsFromHtml(html, source);
   } catch (error) {
     parseError = error.message;
   }
@@ -70,23 +74,31 @@ async function collectSource(bank, source, { offline, timeoutMs, userAgent }) {
 }
 
 /**
- * Собрать факты по одному банку и сохранить их в knowledge/facts/<bank>.json
+ * Собрать факты по одному объекту и сохранить их в data/<профиль>/facts/<объект>.json
  */
-export async function fetchBank(bankQuery, { offline = false, timeoutMs, userAgent } = {}) {
-  const config = loadBanksConfig();
-  const bank = bankQuery ? findBank(bankQuery) : null;
-  if (!bank) throw new Error(`Банк не найден: «${bankQuery}»`);
+export async function fetchSubject(subjectQuery, { offline = false, timeoutMs, userAgent, profile = null } = {}) {
+  const active = loadProfile(profile);
+  const config = loadSubjectsConfig(profile);
+  const subject = subjectQuery ? findSubject(subjectQuery, profile) : null;
+  if (!subject) {
+    throw new Error(
+      `${active.subject_label} не найден: «${subjectQuery}». Список — profiles/${active.id}/subjects.json`,
+    );
+  }
+  const extractor = getExtractor(active.extractor);
 
   const options = {
     offline,
-    timeoutMs: timeoutMs ?? config.default_timeout_ms ?? 15000,
+    profile,
+    timeoutMs: timeoutMs ?? config.default_timeout_ms ?? envInt('FETCH_TIMEOUT_MS', 15000),
     userAgent: userAgent ?? config.user_agent ?? 'Mozilla/5.0',
+    extractor,
   };
 
   const results = [];
-  for (const source of bank.sources ?? []) {
+  for (const source of subject.sources ?? []) {
     try {
-      results.push(await collectSource(bank, source, options));
+      results.push(await collectSource(subject, source, options));
     } catch (error) {
       results.push({ source_id: source.id, url: source.url, status: 'error', reason: error.message });
     }
@@ -102,16 +114,23 @@ export async function fetchBank(bankQuery, { offline = false, timeoutMs, userAge
     }
   }
 
-  const saved = mergeFacts(bank.id, combined);
-  return { bank: bank.id, bank_name: bank.name, offline, results, saved };
+  const saved = mergeFacts(subject.id, combined, profile);
+  return {
+    profile: active.id,
+    subject: subject.id,
+    subject_name: subject.name,
+    offline,
+    results,
+    saved,
+  };
 }
 
-/** Все банки из конфига */
-export async function fetchAll({ offline = false, timeoutMs, userAgent } = {}) {
-  const banks = listBanks();
+/** Все объекты профиля */
+export async function fetchAll({ offline = false, timeoutMs, userAgent, profile = null } = {}) {
+  const subjects = listSubjects(profile);
   const out = [];
-  for (const bank of banks) {
-    out.push(await fetchBank(bank.id, { offline, timeoutMs, userAgent }));
+  for (const subject of subjects) {
+    out.push(await fetchSubject(subject.id, { offline, timeoutMs, userAgent, profile }));
   }
   return out;
 }
@@ -119,7 +138,9 @@ export async function fetchAll({ offline = false, timeoutMs, userAgent } = {}) {
 /** Человекочитаемая сводка по прогону сбора */
 export function formatFetchReport(report) {
   const lines = [];
-  lines.push(`# Сбор фактов: ${report.bank_name ?? report.bank}${report.offline ? ' (офлайн, фикстуры)' : ''}`);
+  lines.push(
+    `# Сбор фактов: ${report.subject_name ?? report.subject}${report.offline ? ' (офлайн, фикстуры)' : ''}`,
+  );
   for (const result of report.results ?? []) {
     const mark = result.status === 'ok' ? '✓' : result.status === 'skipped' ? '–' : '✗';
     lines.push(`${mark} ${result.title ?? result.source_id}: ${result.status}${result.reason ? ` (${result.reason})` : ''}`);

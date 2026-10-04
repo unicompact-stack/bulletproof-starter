@@ -1,24 +1,30 @@
-// Публикация поста в сообщество. По умолчанию — «сухой прогон»:
-// ничего не уходит в ВК, пока не передан флаг --live.
+// Публикация поста. По умолчанию — «сухой прогон»: ничего никуда не уходит,
+// пока не передан флаг --live.
+//
+// Один пост может уйти на несколько площадок. Решение принимается один раз,
+// результат собирается по каждой площадке отдельно: одна ошибка не отменяет
+// остальные, но и «успех» не показывается там, где его не было.
 
-import { publishToWall, vkReadiness } from './vk.js';
-import { savePost } from './generate.js';
+import { savePost, recheckPost } from './generate.js';
 import { appendHistory } from './history.js';
 import { runChecks } from './checks.js';
+import { publishToChannels, enabledChannelIds, strictestMaxLength } from './channels/index.js';
 
 /**
  * @param {Object} post пост из очереди
- * @param {Object} [options] { dryRun = true, schedule }
+ * @param {Object} [options] { dryRun = true, schedule, channels, comment }
  */
 export async function publishPost(post, options = {}) {
-  const { dryRun = true, schedule = null, comment = null } = options;
+  const { dryRun = true, schedule = null, comment = null, channels = null, profile = null } = options;
 
   if (!post) throw new Error('Пост не найден');
   if (post.status === 'published') return { skipped: true, reason: 'Уже опубликован', post };
 
   // Проверки перезапускаются прямо перед публикацией: пост мог быть отредактирован руками,
   // а решение о публикации должно опираться на текущий текст, а не на старый флаг.
-  const checks = runChecks(post);
+  const targetChannels = channels && channels.length ? channels : enabledChannelIds();
+  const maxLength = strictestMaxLength(targetChannels);
+  const checks = runChecks(post, { maxLength, profile: profile ?? post.profile ?? null });
   post = { ...post, checks };
   if (checks.errors.length) {
     throw new Error(
@@ -26,48 +32,81 @@ export async function publishPost(post, options = {}) {
     );
   }
 
-  const publishDate = schedule ? Math.floor(new Date(schedule).getTime() / 1000) : null;
-  if (schedule && Number.isNaN(publishDate)) {
+  if (schedule && Number.isNaN(new Date(schedule).getTime())) {
     throw new Error(`Не понял дату отложенной публикации: «${schedule}». Формат: 2026-10-05T10:00`);
   }
 
-  if (dryRun) {
-    const readiness = vkReadiness();
-    return {
-      dry_run: true,
-      would_publish: {
-        owner_id: readiness.group_id ? `-${readiness.group_id}` : null,
-        message_length: post.text.length,
-        scheduled: publishDate ? new Date(publishDate * 1000).toISOString() : null,
-      },
-      post,
-    };
-  }
-
-  const result = await publishToWall({
-    message: post.text,
-    publishDate,
+  const results = await publishToChannels(post, {
+    dryRun,
+    channels: targetChannels,
+    schedule,
+    comment,
     attachments: post.attachments ?? null,
   });
 
-  const updated = savePost({
-    ...post,
-    status: 'published',
-    published: { ...result, at: new Date().toISOString(), scheduled: Boolean(publishDate) },
-  });
+  const errors = results.filter((item) => item.status === 'error');
+  const succeeded = results.filter((item) => !item.status.startsWith('would') && item.status !== 'error');
 
-  appendHistory({
-    kind: publishDate ? 'scheduled' : 'published',
-    id: post.id,
-    bank_id: post.bank_id,
-    rubric: post.rubric,
-    topic_id: post.topic_id,
-    at: new Date().toISOString(),
-    vk_post_id: result.post_id,
-    url: result.url,
-  });
+  if (dryRun) {
+    return { dry_run: true, channels: results, post, would_publish: summarize(results) };
+  }
 
-  return { published: true, ...result, post: updated };
+  if (errors.length && !succeeded.length) {
+    throw new Error(
+      'Ни одна площадка не приняла публикацию:\n- ' +
+        errors.map((item) => `${item.channel_name}: ${item.error}`).join('\n- '),
+    );
+  }
+
+  const updated = savePost(
+    {
+      ...post,
+      status: succeeded.length ? 'published' : 'blocked',
+      published: {
+        at: new Date().toISOString(),
+        scheduled: Boolean(schedule),
+        channels: results,
+      },
+    },
+    { profile },
+  );
+
+  appendHistory(
+    {
+      kind: schedule ? 'scheduled' : 'published',
+      id: post.id,
+      profile: post.profile ?? null,
+      subject_id: post.subject_id,
+      rubric: post.rubric,
+      topic_id: post.topic_id,
+      at: new Date().toISOString(),
+      channels: results,
+      url: succeeded.find((item) => item.url)?.url ?? null,
+    },
+    profile,
+  );
+
+  return {
+    published: succeeded.length > 0,
+    partial: errors.length > 0,
+    channels: results,
+    url: succeeded.find((item) => item.url)?.url ?? null,
+    post: updated,
+  };
+}
+
+/** Короткая сводка сухого прогона: что и куда ушло бы */
+function summarize(results) {
+  return {
+    message_length: results[0]?.message_length ?? null,
+    channels: results.map((item) => ({
+      channel: item.channel,
+      name: item.channel_name,
+      status: item.status,
+      max_length: item.max_length ?? null,
+    })),
+    scheduled: results.find((item) => item.scheduled)?.scheduled ?? null,
+  };
 }
 
 /** Пакетная публикация: останавливается на первой ошибке, чтобы не залить мусор */
@@ -83,3 +122,5 @@ export async function publishBatch(posts, options = {}) {
   }
   return results;
 }
+
+export { recheckPost };

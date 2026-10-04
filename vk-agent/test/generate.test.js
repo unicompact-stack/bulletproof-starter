@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { makeWorkspace, cleanup } from './helpers.js';
 
 const root = await makeWorkspace();
-const { fetchBank } = await import('../src/fetch.js');
+const { fetchSubject } = await import('../src/fetch.js');
 const { buildPost, savePost } = await import('../src/generate.js');
 const { loadDisclaimers } = await import('../src/config.js');
 
@@ -14,8 +14,8 @@ test.after(() => cleanup(root));
 const disclaimers = loadDisclaimers();
 
 test('пост про карту Т-Банка собирается и проходит проверки', async () => {
-  await fetchBank('tbank', { offline: true });
-  const post = buildPost({ bank: 'tbank', rubric: 'karta', dryRun: true });
+  await fetchSubject('tbank', { offline: true });
+  const post = buildPost({ subject: 'tbank', rubric: 'karta', dryRun: true });
 
   assert.equal(post.status, 'ready');
   assert.equal(post.checks.errors.length, 0);
@@ -29,14 +29,14 @@ test('пост про карту Т-Банка собирается и прох�
 });
 
 test('сборка детерминированная: те же входные — тот же текст', async () => {
-  const first = buildPost({ bank: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
-  const second = buildPost({ bank: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
+  const first = buildPost({ subject: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
+  const second = buildPost({ subject: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
   assert.equal(first.text, second.text);
 });
 
 test('вариант меняет хук, но не факты', async () => {
-  const first = buildPost({ bank: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
-  const second = buildPost({ bank: 'tbank', rubric: 'karta', variant: 1, dryRun: true });
+  const first = buildPost({ subject: 'tbank', rubric: 'karta', variant: 0, dryRun: true });
+  const second = buildPost({ subject: 'tbank', rubric: 'karta', variant: 1, dryRun: true });
   assert.notEqual(first.text, second.text);
   assert.deepEqual(
     first.facts.map((fact) => fact.value).sort(),
@@ -45,40 +45,40 @@ test('вариант меняет хук, но не факты', async () => {
 });
 
 test('без обязательных фактов пост помечается needs-data и не публикуется', () => {
-  const post = buildPost({ bank: 'vtb', rubric: 'karta', dryRun: true });
+  const post = buildPost({ subject: 'vtb', rubric: 'karta', dryRun: true });
   assert.equal(post.status, 'needs-data');
   assert.ok(post.missing_required.includes('cashback_limit'));
   assert.match(post.checks.errors[0].message, /Нет обязательных фактов/);
 });
 
 test('кредитка без данных о льготном периоде не проходит', async () => {
-  const post = buildPost({ bank: 'tbank', rubric: 'kreditka', dryRun: true });
+  const post = buildPost({ subject: 'tbank', rubric: 'kreditka', dryRun: true });
   assert.equal(post.status, 'needs-data');
   assert.deepEqual(post.missing_required.sort(), ['grace_period', 'limit_max']);
 });
 
 test('новость собирается из свежего заголовка', async () => {
-  await fetchBank('alfa', { offline: true });
-  const post = buildPost({ bank: 'alfa', rubric: 'novost', dryRun: true });
+  await fetchSubject('alfa', { offline: true });
+  const post = buildPost({ subject: 'alfa', rubric: 'novost', dryRun: true });
   assert.equal(post.status, 'ready');
   assert.match(post.text, /накопительным счетам/i);
   assert.match(post.text, /14\.09\.2026/);
 });
 
 test('рубрика определяется по тексту команды', () => {
-  const post = buildPost({ bank: 'tbank', text: 'размести пост про вклад и накопительный счёт', dryRun: true });
+  const post = buildPost({ subject: 'tbank', text: 'размести пост про вклад и накопительный счёт', dryRun: true });
   assert.equal(post.rubric, 'vklad');
 });
 
 test('тема журнала подбирается под рубрику', () => {
-  const vklad = buildPost({ bank: 'tbank', rubric: 'vklad', dryRun: true });
+  const vklad = buildPost({ subject: 'tbank', rubric: 'vklad', dryRun: true });
   assert.equal(vklad.topic_id, 'vklad-ili-schet');
-  const karta = buildPost({ bank: 'tbank', rubric: 'karta', dryRun: true });
+  const karta = buildPost({ subject: 'tbank', rubric: 'karta', dryRun: true });
   assert.equal(karta.topic_id, 'kak-vybrat-kartu');
 });
 
 test('сохранённый пост лежит в очереди и читается обратно', async () => {
-  const post = buildPost({ bank: 'tbank', rubric: 'karta', dryRun: true });
+  const post = buildPost({ subject: 'tbank', rubric: 'karta', dryRun: true });
   const saved = savePost(post);
   const { loadPost, listPosts } = await import('../src/generate.js');
   const back = loadPost(saved.id);
@@ -86,6 +86,6 @@ test('сохранённый пост лежит в очереди и читае
   assert.ok(listPosts({ limit: 5 }).some((item) => item.id === saved.id));
 });
 
-test('непонятный банк — внятная ошибка', () => {
-  assert.throws(() => buildPost({ bank: 'рога-и-копыта', rubric: 'karta', dryRun: true }), /Банк не найден/);
+test('непонятный объект — внятная ошибка', () => {
+  assert.throws(() => buildPost({ subject: 'рога-и-копыта', rubric: 'karta', dryRun: true }), /Банк не найден/);
 });

@@ -1,0 +1,76 @@
+{
+  "default_timeout_ms": 15000,
+  "user_agent": "Mozilla/5.0",
+  "subjects": [
+    {
+      "id": "bystro",
+      "name": "БыстроДоставка",
+      "aliases": [
+        "быстродаставка",
+        "быстро доставка",
+        "bystro"
+      ],
+      "link": "https://bystro.example/",
+      "help_link": "https://bystro.example/help",
+      "hashtags": [
+        "#БыстроДоставка",
+        "#работа",
+        "#курьер",
+        "#вакансии"
+      ],
+      "tone": "просто и по делу, без обещаний «зарабатывай от 100 тысяч»",
+      "notes": "Курьер на автомобиле. Вилка зарплаты широкая — всегда показывать «от X до Y», а не только верхнюю границу.",
+      "sources": [
+        {
+          "id": "courier",
+          "title": "Вакансия курьера",
+          "url": "https://bystro.example/vacancy/courier",
+          "extract": "vacancy",
+          "fixture": "bystro-courier.html"
+        },
+        {
+          "id": "news",
+          "title": "Новости компании",
+          "url": "https://bystro.example/news",
+          "extract": "text",
+          "fixture": "bystro-news.html"
+        }
+      ]
+    },
+    {
+      "id": "technosfera",
+      "name": "ТехноСфера",
+      "aliases": [
+        "техносфера",
+        "techno",
+        "сфера"
+      ],
+      "link": "https://technosfera.example/",
+      "help_link": "https://technosfera.example/help",
+      "hashtags": [
+        "#ТехноСфера",
+        "#работа",
+        "#вакансии",
+        "#поддержка"
+      ],
+      "tone": "спокойно, без давления: условия важнее обещаний",
+      "notes": "Техническая поддержка, удалёнка. Обязательно упоминать удалённый формат — это главный довод.",
+      "sources": [
+        {
+          "id": "support",
+          "title": "Специалист поддержки",
+          "url": "https://technosfera.example/vacancy/support",
+          "extract": "vacancy",
+          "fixture": "techqa-support.html"
+        },
+        {
+          "id": "news",
+          "title": "Новости компании",
+          "url": "https://technosfera.example/news",
+          "extract": "text",
+          "fixture": "technosfera-news.html"
+        }
+      ]
+    }
+  ]
+}

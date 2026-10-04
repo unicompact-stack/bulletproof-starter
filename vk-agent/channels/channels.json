@@ -1,0 +1,32 @@
+{
+  "channels": {
+    "vk": {
+      "name": "ВКонтакте",
+      "adapter": "vk",
+      "enabled": true,
+      "implemented": true,
+      "max_length": 2600,
+      "env": ["VK_TOKEN", "VK_GROUP_ID"],
+      "note": "Работает. Публикация в стену сообщества, поддерживается отложенная."
+    },
+    "telegram": {
+      "name": "Telegram",
+      "adapter": "telegram",
+      "enabled": false,
+      "implemented": false,
+      "max_length": 4096,
+      "env": ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHANNEL_ID"],
+      "note": "Заглушка. Адаптер не написан: сначала довести ВК до живого прогона."
+    },
+    "dzen": {
+      "name": "Дзен",
+      "adapter": "dzen",
+      "enabled": false,
+      "implemented": false,
+      "max_length": 10000,
+      "env": ["DZEN_CHANNEL_ID", "DZEN_TOKEN"],
+      "note": "Заглушка. Адаптер не написан. У Дзена есть требования к оформлению карточки — учесть при подключении."
+    }
+  },
+  "default_enabled": ["vk"]
+}

@@ -66,8 +66,9 @@
 </head>
 <body>
 <header>
-  <h1>VK Agent — панель превью</h1>
-  <span class="badge" id="vkBadge">ВК: проверяю…</span>
+  <h1 id="panelTitle">Панель превью</h1>
+  <span class="badge" id="profileBadge">тематика: —</span>
+  <span class="badge" id="vkBadge">площадки: проверяю…</span>
   <span class="badge" id="factsBadge">факты: —</span>
   <span class="badge" id="modeBadge">режим: черновик</span>
 </header>
@@ -76,8 +77,10 @@
   <section>
     <div class="card">
       <h2>Собрать пост</h2>
-      <label>Банк</label>
-      <select id="bank"></select>
+      <label>Тематика</label>
+      <select id="profile"></select>
+      <label id="subjectLabel">Объект</label>
+      <select id="subject"></select>
       <label>Рубрика (тип поста)</label>
       <select id="rubric"></select>
       <label>Тема журнала</label>
@@ -86,6 +89,8 @@
       <input id="variant" type="number" min="0" max="50" value="0">
       <label>Заметка для себя</label>
       <input id="note" placeholder="например: пост к пятнице">
+      <label>Площадки публикации</label>
+      <div id="channelBox" class="muted">—</div>
       <div class="row">
         <button id="generate">Собрать пост</button>
         <button class="ghost" id="fetch">Обновить факты</button>
@@ -113,7 +118,7 @@
             <span>только что · <span id="postMeta">пост не собран</span></span>
           </div>
         </div>
-        <div class="post-body" id="postText">Выбери банк и рубрику, нажми «Собрать пост» — здесь появится текст.
+        <div class="post-body" id="postText">Выбери объект и рубрику, нажми «Собрать пост» — здесь появится текст.
 
 Проверки при этом покажут, чего не хватает: цифр, даты проверки или обязательной оговорки.</div>
         <div class="post-foot"><span>♡ Нравится</span><span>💬 Комментировать</span><span>↗ Поделиться</span></div>
@@ -131,13 +136,17 @@
         <label style="display:flex;gap:8px;align-items:center;margin:0;flex:1">
           <input type="checkbox" id="live" style="width:auto"> боевой режим (реально публикует)
         </label>
+        <label style="display:flex;gap:8px;align-items:center;margin:0">
+          <input type="checkbox" id="allChannels" style="width:auto" checked> все включённые площадки
+        </label>
+        <select id="channelSelect" style="flex:1;max-width:220px"></select>
         <input id="schedule" type="datetime-local" style="flex:1">
       </div>
       <div class="flash" id="flash2"></div>
     </div>
 
     <div class="card">
-      <h2>База фактов: <span id="factsBank">—</span></h2>
+      <h2>База фактов: <span id="factsSubject">—</span></h2>
       <div class="split">
         <div>
           <table><thead><tr><th>Факт</th><th>Значение</th><th>Проверено</th></tr></thead><tbody id="factsBody"></tbody></table>
@@ -178,15 +187,40 @@ function colorFor(name) {
 }
 
 function renderState() {
-  const banks = STATE.banks;
-  $('bank').innerHTML = banks.map((b) => `<option value="${b.id}">${b.name}</option>`).join('');
+  document.getElementById('panelTitle').textContent = `Панель превью — ${STATE.profile.name}`;
+
+  const profiles = STATE.profiles || [];
+  $('profile').innerHTML = profiles.map((p) =>
+    `<option value="${p.id}" ${p.id === STATE.profile.id ? 'selected' : ''}>${p.name}</option>`).join('');
+  $('profile').disabled = profiles.length < 2;
+  $('profile').title = profiles.length < 2
+    ? 'Тематика меняется флагом --profile или переменной PROFILE в .env'
+    : 'Тематика задаётся при запуске панели: --profile <id>';
+  $('profileBadge').textContent = `тематика: ${STATE.profile.id}`;
+  $('subjectLabel').textContent = STATE.profile.subject_label;
+
+  $('subject').innerHTML = STATE.subjects.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
   $('rubric').innerHTML = STATE.rubrics.map((r) => `<option value="${r.id}">${r.name}</option>`).join('');
   renderTopics();
 
-  const vk = STATE.vk;
-  $('vkBadge').textContent = vk.ready ? `ВК: группа ${vk.group_id}` : `ВК: не настроен`;
-  $('vkBadge').className = 'badge ' + (vk.ready ? 'ok' : 'bad');
-  $('vkBadge').title = vk.problems.join('; ') || 'Ключ и id группы заполнены';
+  const ready = (STATE.active_channels || []).length;
+  $('vkBadge').textContent = `площадки: ${(STATE.active_channels || []).join(', ') || 'нет'}`;
+  const broken = (STATE.channels_state || []).filter((c) => c.enabled && !c.ready);
+  $('vkBadge').className = 'badge ' + (broken.length ? 'bad' : ready ? 'ok' : 'bad');
+  $('vkBadge').title = (STATE.channels_state || []).map((c) => `${c.name}: ${(c.problems || []).join('; ') || 'готова'}`).join('\n');
+
+  $('channelBox').innerHTML = (STATE.channels || []).map((c) => {
+    const on = (STATE.active_channels || []).includes(c.id);
+    const mark = !c.enabled ? '–' : c.implemented ? (on ? '✓' : '✗') : '○';
+    const state = !c.enabled ? 'выключена' : c.implemented ? (on ? 'публикуем' : 'не готова') : 'заглушка, адаптера нет';
+    return `<div><b>${mark} ${c.name}</b> <span class="muted">· ${state} · лимит ${c.max_length} симв.</span></div>`;
+  }).join('');
+  $('channelSelect').innerHTML = (STATE.active_channels || [])
+    .map((id) => {
+      const channel = (STATE.channels || []).find((c) => c.id === id);
+      return `<option value="${id}">${channel ? channel.name : id}</option>`;
+    }).join('');
+  $('channelSelect').disabled = (STATE.active_channels || []).length < 2;
 
   renderHistory();
   renderFactsForSelected();
@@ -205,7 +239,7 @@ function renderTopics() {
 function renderHistory() {
   $('history').innerHTML = STATE.posts.length
     ? STATE.posts.map((p) => `<li data-id="${p.id}"><span class="dot ${p.status}"></span>
-        <span><b>${p.bank_name}</b> · ${p.rubric_name}<br><span class="muted">${p.id} · ${p.status}</span></span></li>`).join('')
+        <span><b>${p.subject_name}</b> · ${p.rubric_name}<br><span class="muted">${p.id} · ${p.status}</span></span></li>`).join('')
     : '<li class="muted">Пока пусто — собери первый пост.</li>';
   document.querySelectorAll('#history li[data-id]').forEach((li) => {
     li.onclick = async () => {
@@ -215,9 +249,9 @@ function renderHistory() {
   });
 }
 
-async function loadFacts(bankId) {
-  const facts = await api('/api/facts?bank=' + encodeURIComponent(bankId));
-  $('factsBank').textContent = facts.bank_name || bankId;
+async function loadFacts(subjectId) {
+  const facts = await api('/api/facts?subject=' + encodeURIComponent(subjectId));
+  $('factsSubject').textContent = facts.subject_name || subjectId;
   const entries = Object.entries(facts.facts || {});
   $('factsBody').innerHTML = entries.length
     ? entries.map(([key, f]) => `<tr class="${f.fresh ? '' : 'stale'}">
@@ -227,17 +261,17 @@ async function loadFacts(bankId) {
     : '<tr><td colspan="3" class="muted">Фактов нет — нажми «Обновить факты»</td></tr>';
   $('factsComment').textContent = facts.updated
     ? `Обновлено: ${facts.updated}. Всего фактов: ${entries.length}.`
-    : 'Фактов ещё нет. Кнопка «Обновить факты» собирает их со страниц банков.';
+    : 'Фактов ещё нет. Кнопка «Обновить факты» собирает их со страниц.';
   $('factsBadge').textContent = `факты: ${entries.length}`;
 }
 
-function renderFactsForSelected() { loadFacts($('bank').value).catch(() => {}); }
+function renderFactsForSelected() { loadFacts($('subject').value).catch(() => {}); }
 
 function showPost(post) {
   CURRENT = post;
-  $('groupName').textContent = post.bank_name;
-  $('ava').textContent = post.bank_name.slice(0, 1);
-  $('ava').style.background = colorFor(post.bank_name);
+  $('groupName').textContent = post.subject_name;
+  $('ava').textContent = post.subject_name.slice(0, 1);
+  $('ava').style.background = colorFor(post.subject_name);
   $('postMeta').textContent = `${post.rubric_name} · вариант ${post.variant} · ${post.topic_title || 'без темы'}`;
   $('postText').textContent = post.text;
 
@@ -250,7 +284,7 @@ function showPost(post) {
 
   $('hintBox').innerHTML = (post.missing_required || []).length
     ? `<div class="hint">Не хватает обязательных фактов: <b>${post.missing_required.join(', ')}</b>.<br>
-       Запусти <code>npm run fetch -- --bank ${post.bank_id}</code> (на своём компьютере, с интернетом) или
+       Запусти <code>npm run fetch -- --subject ${post.subject_id}</code> (на своём компьютере, с интернетом) или
        нажми «Факты из фикстур», чтобы посмотреть механику на тестовых данных.</div>`
     : '';
 
@@ -261,7 +295,7 @@ $('generate').onclick = async () => {
   try {
     flash('flash', 'Собираю…');
     const post = await api('/api/generate', {
-      bank: $('bank').value,
+      subject: $('subject').value,
       rubric: $('rubric').value,
       topic: $('topic').value || null,
       variant: Number($('variant').value || 0),
@@ -272,6 +306,10 @@ $('generate').onclick = async () => {
   } catch (error) {
     flash('flash', error.message, true);
   }
+};
+
+$('profile').onchange = () => {
+  flash('flash', `Переключи тематику: перезапусти панель с --profile ${$('profile').value}`);
 };
 
 $('regen').onclick = async () => {
@@ -293,15 +331,24 @@ $('save').onclick = async () => {
 $('publish').onclick = async () => {
   if (!CURRENT) return flash('flash2', 'Сначала собери пост', true);
   const live = $('live').checked;
-  if (live && !confirm('Опубликовать по-настоящему в сообществе?')) return;
+  const targets = $('allChannels').checked ? [] : [$('channelSelect').value].filter(Boolean);
+  const targetText = targets.length ? targets.join(', ') : (STATE.active_channels || []).join(', ');
+  if (live && !confirm(`Опубликовать по-настоящему: ${targetText}?`)) return;
   try {
     flash('flash2', 'Публикую…');
     const result = await api('/api/publish', {
       id: CURRENT.id,
       live,
+      channels: targets,
       schedule: $('schedule').value || null,
     });
-    flash('flash2', result.dry_run ? 'Сухой прогон пройден, в ВК ничего не ушло' : `Опубликовано: ${result.url}`);
+    if (result.dry_run) {
+      flash('flash2', 'Сухой прогон пройден, наружу ничего не ушло: ' +
+        (result.channels || []).map((c) => `${c.channel_name} — ${c.status}`).join('; '));
+    } else {
+      flash('flash2', (result.channels || []).map((c) =>
+        c.status === 'error' ? `✗ ${c.channel_name}: ${c.error}` : `✓ ${c.channel_name}${c.url ? ': ' + c.url : ''}`).join('; '));
+    }
     if (!result.dry_run) {
       const post = await api('/api/post?id=' + encodeURIComponent(CURRENT.id));
       showPost(post);
@@ -313,11 +360,11 @@ $('publish').onclick = async () => {
 
 async function doFetch(offline) {
   try {
-    flash('flash', offline ? 'Разбираю фикстуры…' : 'Загружаю страницы банков…');
-    const report = await api('/api/fetch', { bank: $('bank').value, offline });
+    flash('flash', offline ? 'Разбираю фикстуры…' : 'Загружаю страницы…');
+    const report = await api('/api/fetch', { subject: $('subject').value, offline });
     const ok = report.results.filter((r) => r.status === 'ok').length;
     flash('flash', `Источников разобрано: ${ok} из ${report.results.length}. Фактов в базе: ${report.saved.total}.`);
-    await loadFacts($('bank').value);
+    await loadFacts($('subject').value);
     STATE = await api('/api/state');
     renderHistory();
   } catch (error) {
@@ -327,7 +374,7 @@ async function doFetch(offline) {
 $('fetch').onclick = () => doFetch(false);
 $('fetchOffline').onclick = () => doFetch(true);
 
-$('bank').onchange = () => { renderFactsForSelected(); };
+$('subject').onchange = () => { renderFactsForSelected(); };
 $('rubric').onchange = () => { renderTopics(); };
 
 (async () => {

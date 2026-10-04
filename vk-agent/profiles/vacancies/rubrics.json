@@ -1,0 +1,61 @@
+{
+  "rubrics": [
+    {
+      "id": "vakansiya",
+      "name": "Вакансия",
+      "template": "vakansiya.md",
+      "keywords": [
+        "вакансия",
+        "вакансии",
+        "работа",
+        "курьер",
+        "подработка",
+        "поиск",
+        "требуется",
+        "откликнуться"
+      ],
+      "required_facts": [
+        "salary",
+        "schedule"
+      ],
+      "disclaimer": "job",
+      "ads_check": true
+    },
+    {
+      "id": "usloviya",
+      "name": "Условия работы",
+      "template": "usloviya.md",
+      "keywords": [
+        "условия",
+        "оформление",
+        "график",
+        "зарплата",
+        "опыт",
+        "льготы"
+      ],
+      "required_facts": [
+        "salary",
+        "employment",
+        "location"
+      ],
+      "disclaimer": "job"
+    },
+    {
+      "id": "novost",
+      "name": "Новость компании",
+      "template": "novost.md",
+      "keywords": [
+        "новость",
+        "новости",
+        "открыли",
+        "запустили",
+        "набор"
+      ],
+      "required_facts": [
+        "news_headline",
+        "news_date"
+      ],
+      "disclaimer": "soft"
+    }
+  ]
+}

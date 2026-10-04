@@ -1,13 +1,14 @@
 {
-  "name": "vk-agent",
-  "version": "0.1.0",
+  "name": "content-agent",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Агент ведения группы ВКонтакте: собирает факты о банках и продуктах, собирает посты по шаблонам, показывает превью, публикует в сообщество",
+  "description": "Агент контента для соцсетей: собирает факты с сайтов, готовит посты по шаблонам, показывает превью и публикует на несколько площадок. Тематика и площадки задаются настройками.",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
+    "profiles": "node src/cli.js profiles",
     "fetch": "node src/cli.js fetch",
     "topic": "node src/cli.js topic",
     "generate": "node src/cli.js generate",

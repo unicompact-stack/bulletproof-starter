@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { makeWorkspace, cleanup } from './helpers.js';
 
 const root = await makeWorkspace();
-const { fetchBank } = await import('../src/fetch.js');
+const { fetchSubject } = await import('../src/fetch.js');
 const { buildPost } = await import('../src/generate.js');
 const { runChecks } = await import('../src/checks.js');
 const { loadDisclaimers } = await import('../src/config.js');
@@ -13,8 +13,8 @@ const { appendHistory } = await import('../src/history.js');
 
 test.after(() => cleanup(root));
 
-await fetchBank('tbank', { offline: true });
-const base = buildPost({ bank: 'tbank', rubric: 'karta', dryRun: true });
+await fetchSubject('tbank', { offline: true });
+const base = buildPost({ subject: 'tbank', rubric: 'karta', dryRun: true });
 const disclaimers = loadDisclaimers();
 
 const ids = (list) => list.map((item) => item.id);
@@ -102,7 +102,7 @@ test('повтор поста в течение недели — предупр�
   appendHistory({
     kind: 'published',
     id: 'test-повтор',
-    bank_id: 'tbank',
+    subject_id: 'tbank',
     rubric: 'karta',
     at: new Date(Date.now() - 2 * 86400000).toISOString(),
   });
@@ -113,6 +113,11 @@ test('повтор поста в течение недели — предупр�
 test('задвоенное слово ловится', () => {
   const result = runChecks({ ...base, text: `${base.text}\n\nСтавка до до 15% на всё.` });
   assert.ok(ids(result.warnings).includes('double-word'));
+});
+
+test('задвоенная фраза ловится («в месяц в месяц»)', () => {
+  const result = runChecks({ ...base, text: `${base.text}\n\nЛимит — 5 000 ₽ в месяц в месяц.` });
+  assert.ok(ids(result.warnings).includes('double-phrase'), JSON.stringify(result.warnings));
 });
 
 test('пустой объект не ломает проверки', () => {

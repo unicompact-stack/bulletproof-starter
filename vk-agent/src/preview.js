@@ -1,11 +1,14 @@
 // Панель превью: маленький HTTP-сервер на стандартной библиотеке, без зависимостей.
 // Отдаёт страницу panel/page.html и JSON-API к ней.
-// Полуавтомат: пост собирается здесь, публикация уходит в ВК только по кнопке.
+// Полуавтомат: пост собирается здесь, наружу уходит только по кнопке «Опубликовать».
+//
+// Панель работает с активной тематикой (--profile / PROFILE) и всеми включёнными площадками.
 
 import http from 'node:http';
 import { env, envInt, readText, resolvePath, isFresh, daysSince, todayISO } from './util.js';
-import { findBank, listBanks, loadFacts } from './bank.js';
-import { loadRubrics } from './config.js';
+import { listSubjects, findSubject, loadFacts } from './subject.js';
+import { loadRubrics, loadProfile } from './config.js';
+import { listProfiles } from './profile.js';
 import {
   buildPost,
   listPosts,
@@ -15,9 +18,9 @@ import {
   savePost,
   checksSummary,
 } from './generate.js';
-import { fetchBank } from './fetch.js';
+import { fetchSubject } from './fetch.js';
 import { publishPost } from './publish.js';
-import { vkReadiness } from './vk.js';
+import { allChannelsReadiness, enabledChannelIds, listChannels, strictestMaxLength } from './channels/index.js';
 
 function json(response, status, data) {
   const body = JSON.stringify(data);
@@ -55,26 +58,22 @@ async function readBody(request) {
   }
 }
 
-function factsForPanel(bankId, ttlDays = 30) {
-  const bank = findBank(bankId);
-  const data = loadFacts(bankId);
+function factsForPanel(subjectId, ttlDays = 30, profile = null) {
+  const subject = findSubject(subjectId, profile);
+  const data = loadFacts(subjectId, profile);
   const facts = {};
   for (const [key, fact] of Object.entries(data.facts ?? {})) {
-    facts[key] = {
-      ...fact,
-      fresh: isFresh(fact.date, ttlDays),
-      age_days: daysSince(fact.date),
-    };
+    facts[key] = { ...fact, fresh: isFresh(fact.date, ttlDays), age_days: daysSince(fact.date) };
   }
   return {
-    bank_id: bankId,
-    bank_name: bank?.name ?? bankId,
+    subject_id: subjectId,
+    subject_name: subject?.name ?? subjectId,
     updated: data.updated,
     facts,
   };
 }
 
-export function createServer() {
+export function createServer({ profile = null } = {}) {
   return http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
     const path = url.pathname;
@@ -87,42 +86,61 @@ export function createServer() {
 
       // --- состояние ---
       if (request.method === 'GET' && path === '/api/state') {
+        const active = loadProfile(profile);
         return json(response, 200, {
-          banks: listBanks().map((bank) => ({ id: bank.id, name: bank.name, link: bank.link })),
-          rubrics: loadRubrics().map((rubric) => ({ id: rubric.id, name: rubric.name })),
-          topics: loadTopics().map((topic) => ({
+          profile: { id: active.id, name: active.name, subject_label: active.subject_label },
+          profiles: listProfiles(),
+          subjects: listSubjects(profile).map((subject) => ({ id: subject.id, name: subject.name, link: subject.link })),
+          rubrics: loadRubrics(profile).map((rubric) => ({ id: rubric.id, name: rubric.name })),
+          topics: loadTopics(profile).map((topic) => ({
             topic_id: topic.topic_id,
             title: topic.title,
             rubrics: topic.rubrics,
           })),
-          posts: checksSummary().posts,
-          vk: vkReadiness(),
+          posts: checksSummary({ profile }).posts,
+          channels: listChannels().map((channel) => ({
+            id: channel.id,
+            name: channel.name,
+            enabled: Boolean(channel.enabled),
+            implemented: channel.implemented !== false,
+            max_length: channel.max_length ?? null,
+          })),
+          channels_state: allChannelsReadiness(),
+          active_channels: enabledChannelIds(),
+          max_length: strictestMaxLength(),
         });
       }
 
       if (request.method === 'GET' && path === '/api/facts') {
-        return json(response, 200, factsForPanel(url.searchParams.get('bank')));
+        return json(
+          response,
+          200,
+          factsForPanel(url.searchParams.get('subject') ?? url.searchParams.get('bank'), 30, profile),
+        );
       }
 
       if (request.method === 'GET' && path === '/api/post') {
-        const post = loadPost(url.searchParams.get('id'));
+        const post = loadPost(url.searchParams.get('id'), profile);
         if (!post) return json(response, 404, { error: 'Пост не найден' });
         return json(response, 200, post);
       }
 
       if (request.method === 'GET' && path === '/api/posts') {
-        return json(response, 200, { posts: listPosts({ limit: Number(url.searchParams.get('limit') ?? 20) }) });
+        return json(response, 200, {
+          posts: listPosts({ limit: Number(url.searchParams.get('limit') ?? 20), profile }),
+        });
       }
 
       // --- сборка ---
       if (request.method === 'POST' && path === '/api/generate') {
         const body = await readBody(request);
         const post = buildPost({
-          bank: body.bank,
+          subject: body.subject ?? body.bank,
           rubric: body.rubric,
           topic: body.topic,
           variant: Number(body.variant ?? 0),
           note: body.note ?? null,
+          profile,
         });
         return json(response, 200, post);
       }
@@ -130,28 +148,36 @@ export function createServer() {
       // --- правка текста руками ---
       if (request.method === 'POST' && path === '/api/update') {
         const body = await readBody(request);
-        const post = loadPost(body.id);
+        const post = loadPost(body.id, profile);
         if (!post) return json(response, 404, { error: 'Пост не найден' });
-        const edited = recheckPost({ ...post, text: String(body.text ?? post.text), edited_at: new Date().toISOString() });
-        return json(response, 200, savePost(edited));
+        const edited = recheckPost(
+          { ...post, text: String(body.text ?? post.text), edited_at: new Date().toISOString() },
+          { profile },
+        );
+        return json(response, 200, savePost(edited, { profile }));
       }
 
       // --- сбор фактов ---
       if (request.method === 'POST' && path === '/api/fetch') {
         const body = await readBody(request);
-        const report = await fetchBank(body.bank, { offline: Boolean(body.offline) });
+        const report = await fetchSubject(body.subject ?? body.bank, {
+          offline: Boolean(body.offline),
+          profile,
+        });
         return json(response, 200, report);
       }
 
       // --- публикация ---
       if (request.method === 'POST' && path === '/api/publish') {
         const body = await readBody(request);
-        const post = loadPost(body.id);
+        const post = loadPost(body.id, profile);
         if (!post) return json(response, 404, { error: 'Пост не найден' });
-        const fresh = recheckPost(post);
+        const fresh = recheckPost(post, { profile });
         const result = await publishPost(fresh, {
           dryRun: !body.live,
           schedule: body.schedule ?? null,
+          channels: Array.isArray(body.channels) && body.channels.length ? body.channels : null,
+          profile,
         });
         return json(response, 200, { ...result, id: post.id });
       }
@@ -163,13 +189,15 @@ export function createServer() {
   });
 }
 
-export function startServer({ port, host } = {}) {
+export function startServer({ port, host, profile = null } = {}) {
   const listenPort = port ?? envInt('PORT', 4321);
   const listenHost = host ?? env('HOST', '0.0.0.0');
-  const server = createServer();
+  const active = loadProfile(profile);
+  const server = createServer({ profile });
   server.listen(listenPort, listenHost, () => {
     console.log(`Панель превью: http://localhost:${listenPort}`);
     console.log('В песочнице открой превью-вкладку — порт тот же.');
+    console.log(`Тематика: ${active.name} (${active.id}) · площадки: ${enabledChannelIds().join(', ') || 'нет'}`);
     console.log(`Факты на ${todayISO()}`);
   });
   return server;

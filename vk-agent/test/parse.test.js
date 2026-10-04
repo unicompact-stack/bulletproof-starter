@@ -5,13 +5,10 @@ import assert from 'node:assert/strict';
 import { makeWorkspace, fixture, cleanup } from './helpers.js';
 
 const root = await makeWorkspace();
-const {
-  factsFromHtml,
-  findPercents,
-  extractRateRows,
-  extractNews,
-  extractUpdatedDate,
-} = await import('../src/parse.js');
+// Примитивы — из общего парсера, тематическая логика — из экстрактора банков.
+// Так видно, что тематика не тащит с собой общие функции.
+const { findPercents, extractNews, extractUpdatedDate, findMoney } = await import('../src/parse.js');
+const { factsFromHtml, extractRateRows, detectPageKind } = await import('../src/extractors/banks.js');
 
 test.after(() => cleanup(root));
 
@@ -86,6 +83,20 @@ test('новости разбираются в список с датами', ()
   assert.equal(news.length, 2);
   assert.equal(news[0].date, '2026-09-14');
   assert.ok(news[0].summary.length > 10);
+});
+
+test('определение типа страницы различает карты и вклады', () => {
+  assert.equal(detectPageKind({ url: 'https://www.tbank.ru/cards/' }, '<h1>Карты</h1>'), 'cards');
+  assert.equal(detectPageKind({ url: 'https://www.tbank.ru/savings/' }, '<h1>Вклады</h1>'), 'savings');
+  assert.equal(detectPageKind({ url: 'https://example.ru/' }, '<h1>Что-то</h1>'), 'unknown');
+});
+
+test('суммы собираются вместе с периодом и признаком «до»', () => {
+  const found = findMoney('Кэшбэк до 8 000 ₽ в месяц и лимит 5 000 рублей');
+  assert.equal(found[0].amount, '8 000');
+  assert.equal(found[0].value, '8 000 ₽ в месяц');
+  assert.equal(found[0].qualifier, 'до');
+  assert.equal(found[1].value, '5 000 рублей');
 });
 
 test('дата обновления страницы вытаскивается', () => {
