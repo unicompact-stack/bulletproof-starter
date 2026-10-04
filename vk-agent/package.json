@@ -1,0 +1,20 @@
+{
+  "name": "vk-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Агент ведения группы ВКонтакте: собирает факты о банках и продуктах, собирает посты по шаблонам, показывает превью, публикует в сообщество",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fetch": "node src/cli.js fetch",
+    "topic": "node src/cli.js topic",
+    "generate": "node src/cli.js generate",
+    "checks": "node src/cli.js checks",
+    "preview": "node src/cli.js preview",
+    "publish": "node src/cli.js publish",
+    "status": "node src/cli.js status",
+    "test": "node --test test/*.test.js"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$comment": "Какие банки ведём и что парсить. sources[].extract: percents | rss | text. fixture — файл-замена страницы для офлайн-прогона (npm run fetch -- --offline).",
+  "default_timeout_ms": 15000,
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+  "banks": [
+    {
+      "id": "alfa",
+      "name": "Альфа-Банк",
+      "aliases": ["альфа", "alfa", "альфабанк", "альфа-банк", "альфа банк"],
+      "link": "https://alfabank.ru/",
+      "help_link": "https://alfabank.ru/help/",
+      "hashtags": ["#АльфаБанк", "#карты", "#кэшбэк"],
+      "tone": "по-человечески, без канцелярита, короткими абзацами, обращение на «ты»",
+      "sources": [
+        {
+          "id": "cards",
+          "title": "Дебетовые карты",
+          "url": "https://alfabank.ru/everyday/debit-cards/",
+          "extract": "percents",
+          "fixture": "alfa-debit-cards.html"
+        },
+        {
+          "id": "savings",
+          "title": "Накопительные счета и вклады",
+          "url": "https://alfabank.ru/everyday/save/",
+          "extract": "percents",
+          "fixture": "alfa-save.html"
+        },
+        {
+          "id": "news",
+          "title": "Новости банка",
+          "url": "https://alfabank.ru/news/",
+          "extract": "text",
+          "fixture": "alfa-news.html"
+        }
+      ]
+    },
+    {
+      "id": "tbank",
+      "name": "Т-Банк",
+      "aliases": ["тинькофф", "тбанк", "tbank", "т-банк", "т банк", "тиньков"],
+      "link": "https://www.tbank.ru/",
+      "help_link": "https://www.tbank.ru/help/",
+      "hashtags": ["#ТБанк", "#кэшбэк", "#карты"],
+      "tone": "энергично и просто, конкретные цифры, без давления",
+      "sources": [
+        {
+          "id": "cards",
+          "title": "Карты",
+          "url": "https://www.tbank.ru/cards/",
+          "extract": "percents",
+          "fixture": "tbank-cards.html"
+        },
+        {
+          "id": "savings",
+          "title": "Вклады и накопительные счета",
+          "url": "https://www.tbank.ru/savings/",
+          "extract": "percents",
+          "fixture": "tbank-savings.html"
+        }
+      ]
+    },
+    {
+      "id": "sberbank",
+      "name": "Сбербанк",
+      "aliases": ["сбер", "сбербанк", "sber", "sberbank", "сбербанк онлайн"],
+      "link": "https://www.sberbank.ru/",
+      "help_link": "https://www.sberbank.ru/ru/person/help",
+      "hashtags": ["#Сбербанк", "#карты", "#вклады"],
+      "tone": "спокойно и понятно, для широкой аудитории, без сленга",
+      "sources": [
+        {
+          "id": "cards",
+          "title": "Дебетовые карты",
+          "url": "https://www.sberbank.ru/ru/person/bank_cards/debit",
+          "extract": "percents",
+          "fixture": "sber-debit-cards.html"
+        },
+        {
+          "id": "deposits",
+          "title": "Вклады",
+          "url": "https://www.sberbank.ru/ru/person/contributions/deposits",
+          "extract": "percents",
+          "fixture": "sber-deposits.html"
+        }
+      ]
+    },
+    {
+      "id": "vtb",
+      "name": "ВТБ",
+      "aliases": ["втб", "vtb", "втб24"],
+      "link": "https://www.vtb.ru/",
+      "help_link": "https://www.vtb.ru/personal/pomoshch/",
+      "hashtags": ["#ВТБ", "#карты", "#вклады"],
+      "tone": "по делу, нейтрально, без эмодзи через строку",
+      "sources": [
+        {
+          "id": "cards",
+          "title": "Карты",
+          "url": "https://www.vtb.ru/personal/karty/",
+          "extract": "percents",
+          "fixture": "vtb-cards.html"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VK Agent — панель превью</title>
+<style>
+  :root{
+    --bg:#f4f7fa; --card:#fff; --ink:#1a2433; --muted:#6b7a90; --line:#e3e9f0;
+    --accent:#168bea; --ok:#2ccb70; --warn:#f0a400; --bad:#e5484d; --vk:#07f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  .badge{font-size:12px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .badge.ok{color:#0b7a44;border-color:#bfe8d3;background:#eefaf3}
+  .badge.bad{color:#a02327;border-color:#f4c9ca;background:#fdeeee}
+  main{max-width:1180px;margin:0 auto;padding:20px;display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .card h2{font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  select,input,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font:inherit;background:#fff;color:inherit}
+  textarea{min-height:260px;line-height:1.45;font-size:14px}
+  button{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  button.ghost{background:#eef3f9;color:var(--ink)}
+  button.vk{background:var(--vk)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .row > button{flex:1 1 auto}
+  .post{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .post-head{display:flex;gap:11px;align-items:center;padding:13px 15px}
+  .ava{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+  .post-head b{display:block;font-size:14px}
+  .post-head span{font-size:12px;color:var(--muted)}
+  .post-body{padding:2px 15px 15px;white-space:pre-wrap;font-size:15px;line-height:1.55;word-wrap:break-word}
+  .post-foot{border-top:1px solid var(--line);padding:9px 15px;color:var(--muted);font-size:13px;display:flex;gap:18px}
+  .checks{margin-top:14px}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px}
+  .pill.ok{background:#eefaf3;color:#0b7a44}
+  .pill.warn{background:#fff7e6;color:#8a5a00}
+  .pill.blocked,.pill.needs-data{background:#fdeeee;color:#a02327}
+  ul.issues{margin:9px 0 0;padding-left:18px;font-size:13.5px}
+  ul.issues li{margin-bottom:4px}
+  ul.issues.errors li{color:#a02327}
+  ul.issues.warnings li{color:#8a5a00}
+  .hint{background:#fff7e6;border:1px solid #ffe0a3;border-radius:10px;padding:10px 12px;font-size:13.5px;margin-top:12px}
+  .hint code{background:#fff;padding:1px 5px;border-radius:5px;border:1px solid #ffe0a3}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  tr.stale td{background:#fffdf5}
+  .muted{color:var(--muted);font-size:13px}
+  .history{list-style:none;margin:0;padding:0}
+  .history li{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px}
+  .history li:hover{color:var(--accent)}
+  .history li:last-child{border-bottom:0}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--muted)}
+  .dot.ready{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.blocked,.dot.needs-data{background:var(--bad)} .dot.published{background:var(--vk)}
+  .flash{font-size:13px;margin-top:10px;color:var(--muted);min-height:18px}
+  .flash.err{color:#a02327}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:700px){.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>VK Agent — панель превью</h1>
+  <span class="badge" id="vkBadge">ВК: проверяю…</span>
+  <span class="badge" id="factsBadge">факты: —</span>
+  <span class="badge" id="modeBadge">режим: черновик</span>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Собрать пост</h2>
+      <label>Банк</label>
+      <select id="bank"></select>
+      <label>Рубрика (тип поста)</label>
+      <select id="rubric"></select>
+      <label>Тема журнала</label>
+      <select id="topic"></select>
+      <label>Вариант текста (переделывает хук и абзацы)</label>
+      <input id="variant" type="number" min="0" max="50" value="0">
+      <label>Заметка для себя</label>
+      <input id="note" placeholder="например: пост к пятнице">
+      <div class="row">
+        <button id="generate">Собрать пост</button>
+        <button class="ghost" id="fetch">Обновить факты</button>
+      </div>
+      <div class="row">
+        <button class="ghost" id="fetchOffline">Факты из фикстур (офлайн)</button>
+      </div>
+      <div class="flash" id="flash"></div>
+    </div>
+
+    <div class="card">
+      <h2>Последние посты</h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>Превью</h2>
+      <div class="post">
+        <div class="post-head">
+          <div class="ava" id="ava" style="background:#168bea">?</div>
+          <div>
+            <b id="groupName">Название сообщества</b>
+            <span>только что · <span id="postMeta">пост не собран</span></span>
+          </div>
+        </div>
+        <div class="post-body" id="postText">Выбери банк и рубрику, нажми «Собрать пост» — здесь появится текст.
+
+Проверки при этом покажут, чего не хватает: цифр, даты проверки или обязательной оговорки.</div>
+        <div class="post-foot"><span>♡ Нравится</span><span>💬 Комментировать</span><span>↗ Поделиться</span></div>
+      </div>
+
+      <div class="checks" id="checks"></div>
+      <div id="hintBox"></div>
+
+      <div class="row">
+        <button class="ghost" id="save">Сохранить правку</button>
+        <button class="ghost" id="regen">Переделать</button>
+        <button class="vk" id="publish">Опубликовать</button>
+      </div>
+      <div class="row">
+        <label style="display:flex;gap:8px;align-items:center;margin:0;flex:1">
+          <input type="checkbox" id="live" style="width:auto"> боевой режим (реально публикует)
+        </label>
+        <input id="schedule" type="datetime-local" style="flex:1">
+      </div>
+      <div class="flash" id="flash2"></div>
+    </div>
+
+    <div class="card">
+      <h2>База фактов: <span id="factsBank">—</span></h2>
+      <div class="split">
+        <div>
+          <table><thead><tr><th>Факт</th><th>Значение</th><th>Проверено</th></tr></thead><tbody id="factsBody"></tbody></table>
+        </div>
+        <div>
+          <div class="muted" id="factsComment">Факты обновляются кнопкой «Обновить факты».</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let STATE = null;
+let CURRENT = null;
+
+async function api(path, body) {
+  const response = await fetch(path, body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : { method: 'GET' });
+  const data = await response.json().catch(() => ({ error: 'Ответ не JSON' }));
+  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  return data;
+}
+
+function flash(id, message, isError) {
+  const el = $(id);
+  el.textContent = message || '';
+  el.className = 'flash' + (isError ? ' err' : '');
+}
+
+function colorFor(name) {
+  const palette = ['#168bea', '#7b4bd8', '#2ccb70', '#f0a400', '#e5484d', '#0aa2a2'];
+  let sum = 0;
+  for (const ch of String(name)) sum += ch.charCodeAt(0);
+  return palette[sum % palette.length];
+}
+
+function renderState() {
+  const banks = STATE.banks;
+  $('bank').innerHTML = banks.map((b) => `<option value="${b.id}">${b.name}</option>`).join('');
+  $('rubric').innerHTML = STATE.rubrics.map((r) => `<option value="${r.id}">${r.name}</option>`).join('');
+  renderTopics();
+
+  const vk = STATE.vk;
+  $('vkBadge').textContent = vk.ready ? `ВК: группа ${vk.group_id}` : `ВК: не настроен`;
+  $('vkBadge').className = 'badge ' + (vk.ready ? 'ok' : 'bad');
+  $('vkBadge').title = vk.problems.join('; ') || 'Ключ и id группы заполнены';
+
+  renderHistory();
+  renderFactsForSelected();
+}
+
+function renderTopics() {
+  const rubric = $('rubric').value;
+  const topics = STATE.topics;
+  $('topic').innerHTML = '<option value="">автоматически</option>' +
+    topics.map((t) => {
+      const match = (t.rubrics || []).includes(rubric);
+      return `<option value="${t.topic_id}">${t.title}${match ? '' : ' (не по теме)'}</option>`;
+    }).join('');
+}
+
+function renderHistory() {
+  $('history').innerHTML = STATE.posts.length
+    ? STATE.posts.map((p) => `<li data-id="${p.id}"><span class="dot ${p.status}"></span>
+        <span><b>${p.bank_name}</b> · ${p.rubric_name}<br><span class="muted">${p.id} · ${p.status}</span></span></li>`).join('')
+    : '<li class="muted">Пока пусто — собери первый пост.</li>';
+  document.querySelectorAll('#history li[data-id]').forEach((li) => {
+    li.onclick = async () => {
+      const post = await api('/api/post?id=' + encodeURIComponent(li.dataset.id));
+      showPost(post);
+    };
+  });
+}
+
+async function loadFacts(bankId) {
+  const facts = await api('/api/facts?bank=' + encodeURIComponent(bankId));
+  $('factsBank').textContent = facts.bank_name || bankId;
+  const entries = Object.entries(facts.facts || {});
+  $('factsBody').innerHTML = entries.length
+    ? entries.map(([key, f]) => `<tr class="${f.fresh ? '' : 'stale'}">
+        <td>${f.label}<br><span class="muted">${key}</span></td>
+        <td>${f.value}</td>
+        <td>${(f.date || '—')}${f.fresh ? '' : '<br><span class="muted">устарел</span>'}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="muted">Фактов нет — нажми «Обновить факты»</td></tr>';
+  $('factsComment').textContent = facts.updated
+    ? `Обновлено: ${facts.updated}. Всего фактов: ${entries.length}.`
+    : 'Фактов ещё нет. Кнопка «Обновить факты» собирает их со страниц банков.';
+  $('factsBadge').textContent = `факты: ${entries.length}`;
+}
+
+function renderFactsForSelected() { loadFacts($('bank').value).catch(() => {}); }
+
+function showPost(post) {
+  CURRENT = post;
+  $('groupName').textContent = post.bank_name;
+  $('ava').textContent = post.bank_name.slice(0, 1);
+  $('ava').style.background = colorFor(post.bank_name);
+  $('postMeta').textContent = `${post.rubric_name} · вариант ${post.variant} · ${post.topic_title || 'без темы'}`;
+  $('postText').textContent = post.text;
+
+  const checks = post.checks || { errors: [], warnings: [] };
+  const statusText = { ready: 'готов к публикации', warn: 'есть предупреждения', blocked: 'заблокирован проверками', 'needs-data': 'не хватает данных', published: 'опубликован' }[post.status] || post.status;
+  $('checks').innerHTML = `<span class="pill ${post.status}">${statusText}</span>
+    ${checks.errors.length ? `<ul class="issues errors">${checks.errors.map((e) => `<li>${e.message}</li>`).join('')}</ul>` : ''}
+    ${checks.warnings.length ? `<ul class="issues warnings">${checks.warnings.map((w) => `<li>${w.message}</li>`).join('')}</ul>` : ''}
+    ${!checks.errors.length && !checks.warnings.length ? '<div class="muted" style="margin-top:8px">Проверки пройдены без замечаний.</div>' : ''}`;
+
+  $('hintBox').innerHTML = (post.missing_required || []).length
+    ? `<div class="hint">Не хватает обязательных фактов: <b>${post.missing_required.join(', ')}</b>.<br>
+       Запусти <code>npm run fetch -- --bank ${post.bank_id}</code> (на своём компьютере, с интернетом) или
+       нажми «Факты из фикстур», чтобы посмотреть механику на тестовых данных.</div>`
+    : '';
+
+  renderHistory();
+}
+
+$('generate').onclick = async () => {
+  try {
+    flash('flash', 'Собираю…');
+    const post = await api('/api/generate', {
+      bank: $('bank').value,
+      rubric: $('rubric').value,
+      topic: $('topic').value || null,
+      variant: Number($('variant').value || 0),
+      note: $('note').value || null,
+    });
+    showPost(post);
+    flash('flash', `Пост собран: ${post.id}`);
+  } catch (error) {
+    flash('flash', error.message, true);
+  }
+};
+
+$('regen').onclick = async () => {
+  $('variant').value = Number($('variant').value || 0) + 1;
+  $('generate').click();
+};
+
+$('save').onclick = async () => {
+  if (!CURRENT) return flash('flash2', 'Сначала собери пост', true);
+  try {
+    const post = await api('/api/update', { id: CURRENT.id, text: $('postText').textContent });
+    showPost(post);
+    flash('flash2', 'Правка сохранена, проверки перезапущены');
+  } catch (error) {
+    flash('flash2', error.message, true);
+  }
+};
+
+$('publish').onclick = async () => {
+  if (!CURRENT) return flash('flash2', 'Сначала собери пост', true);
+  const live = $('live').checked;
+  if (live && !confirm('Опубликовать по-настоящему в сообществе?')) return;
+  try {
+    flash('flash2', 'Публикую…');
+    const result = await api('/api/publish', {
+      id: CURRENT.id,
+      live,
+      schedule: $('schedule').value || null,
+    });
+    flash('flash2', result.dry_run ? 'Сухой прогон пройден, в ВК ничего не ушло' : `Опубликовано: ${result.url}`);
+    if (!result.dry_run) {
+      const post = await api('/api/post?id=' + encodeURIComponent(CURRENT.id));
+      showPost(post);
+    }
+  } catch (error) {
+    flash('flash2', error.message, true);
+  }
+};
+
+async function doFetch(offline) {
+  try {
+    flash('flash', offline ? 'Разбираю фикстуры…' : 'Загружаю страницы банков…');
+    const report = await api('/api/fetch', { bank: $('bank').value, offline });
+    const ok = report.results.filter((r) => r.status === 'ok').length;
+    flash('flash', `Источников разобрано: ${ok} из ${report.results.length}. Фактов в базе: ${report.saved.total}.`);
+    await loadFacts($('bank').value);
+    STATE = await api('/api/state');
+    renderHistory();
+  } catch (error) {
+    flash('flash', error.message, true);
+  }
+}
+$('fetch').onclick = () => doFetch(false);
+$('fetchOffline').onclick = () => doFetch(true);
+
+$('bank').onchange = () => { renderFactsForSelected(); };
+$('rubric').onchange = () => { renderTopics(); };
+
+(async () => {
+  STATE = await api('/api/state');
+  renderState();
+  if (STATE.posts.length) {
+    const post = await api('/api/post?id=' + encodeURIComponent(STATE.posts[0].id));
+    showPost(post);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "$comment": "ПРИМЕР ФОРМАТА, а не настоящие условия банка. Замени значения своими и переименуй файл в <bank_id>.json — например alfa.json",
+  "bank_id": "example",
+  "updated": "2026-10-04",
+  "notes": "Значения отсюда показывать читателю нельзя: у них нет подтверждённого источника. Укажи source и date.",
+  "facts": {
+    "cashback_rate": {
+      "label": "Кэшбэк",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/cards/",
+      "product": "Название продукта"
+    },
+    "service_cost": {
+      "label": "Обслуживание",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/cards/"
+    },
+    "cashback_limit": {
+      "label": "Лимит кэшбэка",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/cards/"
+    },
+    "rate": {
+      "label": "Ставка",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/save/"
+    },
+    "min_amount": {
+      "label": "Минимальная сумма",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/save/"
+    },
+    "term": {
+      "label": "Срок",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/save/"
+    },
+    "grace_period": {
+      "label": "Льготный период",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/credit-cards/"
+    },
+    "limit_max": {
+      "label": "Лимит",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ БАНКА",
+      "date": "2026-10-04",
+      "source": "https://example.ru/credit-cards/"
+    },
+    "offer": {
+      "label": "Предложение",
+      "value": "ПОДСТАВЬ ЗНАЧЕНИЕ СО СТРАНИЦЫ АКЦИИ",
+      "date": "2026-10-04",
+      "source": "https://example.ru/promo/"
+    },
+    "deadline": {
+      "label": "Срок акции",
+      "value": "ПОДСТАВЬ ДЕДЛАЙН",
+      "date": "2026-10-04",
+      "source": "https://example.ru/promo/"
+    },
+    "news_headline": {
+      "label": "Новость",
+      "value": "ПОДСТАВЬ ЗАГОЛОВОК НОВОСТИ",
+      "date": "2026-10-04",
+      "source": "https://example.ru/news/"
+    },
+    "news_date": {
+      "label": "Дата новости",
+      "value": "04.10.2026",
+      "date": "2026-10-04",
+      "source": "https://example.ru/news/"
+    }
+  }
+}
