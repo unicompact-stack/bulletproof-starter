@@ -12,6 +12,16 @@
   /* ---------- токен сессии (работает, даже если прокси режет Set-Cookie) ---------- */
   var TOKEN_KEY = "sociora_token";
   function getToken() {
+    // приоритет: токен из query (?token=…), затем localStorage, затем cookie.
+    // Query, а не hash: кабинет — SPA с hash-роутингом (#/posts), hash-ссылки
+    // затирали бы токен. Query переживает и перезагрузку, и переходы по меню.
+    var m = /[?&]token=([^&]+)/.exec(location.search || "") ||
+            /[#&]token=([^&]+)/.exec(location.hash || "");
+    if (m) {
+      var t = decodeURIComponent(m[1]);
+      try { localStorage.setItem(TOKEN_KEY, t); } catch (e) {}
+      return t;
+    }
     try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
   }
   function setToken(token) {

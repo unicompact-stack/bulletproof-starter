@@ -54,6 +54,9 @@
   // если токен уже сохранён (даже если cookie потерялись) — сразу ведём в кабинет
   var saved = null;
   try { saved = localStorage.getItem("sociora_token"); } catch (e) {}
+  var tokenMatch = /[?&]token=([^&]+)/.exec(location.search || "") ||
+                   /[#&]token=([^&]+)/.exec(location.hash || "");
+  if (tokenMatch) { saved = decodeURIComponent(tokenMatch[1]); }
   if (saved) {
     fetch("/api/me", { headers: { "Authorization": "Bearer " + saved }, credentials: "same-origin" })
       .then(function (r) { return r.json(); })
@@ -96,9 +99,9 @@
       .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
       .then(function (res) {
         if (res.data.ok) {
-          // сохраняем токен: даже если прокси не отдаёт cookie, сессия работает
+          // сохраняем токен: cookie может не дойти, поэтому дублируем в hash
           try { localStorage.setItem("sociora_token", res.data.token); } catch (e) {}
-          location.href = "/app/";
+          location.href = "/app/?token=" + encodeURIComponent(res.data.token);
         } else {
           showError(res.data.error || "Неверный email или пароль");
           btn.disabled = false;

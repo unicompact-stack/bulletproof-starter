@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Личный кабинет Sociora — вход</title>
+<meta name="description" content="Вход в личный кабинет Sociora: демо-режим без регистрации, проекты, посты, соцсети, аналитика и тарифы.">
+<meta name="theme-color" content="#0a0a13">
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/assets/css/styles.css">
+<link rel="stylesheet" href="/app/app.css">
+<style>
+  .hub {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .hub-box { width: 100%; max-width: 520px; }
+  .hub-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+    margin-bottom: 26px;
+    color: var(--text, #fff);
+    text-decoration: none;
+  }
+  .hub-card {
+    background: rgba(20, 20, 34, 0.72);
+    border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.09));
+    border-radius: 22px;
+    padding: 34px 32px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  }
+  .hub-card h1 { font-size: 30px; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.03em; }
+  .hub-card .sub { color: var(--muted, #a5a3b8); font-size: 15px; margin: 0 0 26px; line-height: 1.55; }
+  .hub-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.09));
+    background: rgba(255, 255, 255, 0.03);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .hub-btn:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06); }
+  .hub-btn .ico {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    border-radius: 12px;
+    font-size: 21px;
+    background: linear-gradient(135deg, #7c6cff, #22d3ee);
+    flex-shrink: 0;
+  }
+  .hub-btn b { display: block; font-size: 15.5px; }
+  .hub-btn span { display: block; font-size: 13px; color: var(--muted, #a5a3b8); margin-top: 2px; }
+  .hub-btn.primary { border-color: rgba(124, 108, 255, 0.45); background: linear-gradient(135deg, rgba(124, 108, 255, 0.16), rgba(34, 211, 238, 0.08)); }
+  .hub-btn.primary .ico { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+  .hub-actions { display: grid; gap: 12px; }
+  .hub-creds {
+    margin-top: 22px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px dashed var(--border-strong, rgba(255, 255, 255, 0.12));
+    font-size: 13px;
+    color: var(--muted, #a5a3b8);
+    line-height: 1.7;
+  }
+  .hub-creds code {
+    color: #c4b5fd;
+    background: rgba(124, 108, 255, 0.12);
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 12.5px;
+  }
+  .hub-foot { margin-top: 20px; font-size: 13px; color: var(--faint, #6f6d80); text-align: center; }
+  .hub-foot a { color: var(--muted, #a5a3b8); }
+  .hub-status { font-size: 13.5px; color: var(--muted, #a5a3b8); margin: 0 0 18px; }
+  .hub-status b { color: #34d399; }
+</style>
+</head>
+<body class="app-body">
+<div class="bg-glows"></div>
+<div class="hub">
+  <div class="hub-box">
+    <a class="hub-logo" href="/"><span class="logo-mark">S</span>Sociora <span style="font-size:12px;color:var(--faint);font-weight:600">личный кабинет</span></a>
+    <div class="hub-card">
+      <h1>Кабинет Sociora</h1>
+      <p class="sub">Отдельный сервер личного кабинета. Можно войти сразу в демо-режим — без регистрации и без карты.</p>
+      <p class="hub-status" id="hub-status">Проверяем сессию…</p>
+      <div class="hub-actions">
+        <button class="hub-btn primary" id="hub-demo" type="button">
+          <span class="ico">🚀</span>
+          <span><b>Войти в демо-режим</b><span>2 проекта, 12 постов, соцсети, аналитика — всё готово</span></span>
+        </button>
+        <a class="hub-btn" href="/login">
+          <span class="ico">🔐</span>
+          <span><b>Вход по email и паролю</b><span>Для тех, кто уже зарегистрировался</span></span>
+        </a>
+        <a class="hub-btn" href="/register">
+          <span class="ico">✨</span>
+          <span><b>Создать аккаунт</b><span>7 дней Trial и 15 постов в подарок</span></span>
+        </a>
+        <a class="hub-btn" href="/admin/" id="hub-admin" style="display:none">
+          <span class="ico">🛡️</span>
+          <span><b>Админ-панель</b><span>Статистика, пользователи, платежи</span></span>
+        </a>
+      </div>
+      <div class="hub-creds">
+        Демо-доступ: <code>demo@sociora.ru</code> / <code>demo1234</code><br>
+        Администратор: <code>admin@sociora.ru</code> / <code>admin1234</code>
+      </div>
+    </div>
+    <p class="hub-foot">Маркетинговый сайт — на <a href="http://127.0.0.1:8080/">отдельном сервере (порт 8080)</a></p>
+  </div>
+</div>
+<script>
+(function () {
+  var TOKEN_KEY = "sociora_token";
+  function token() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  }
+  var tk = token();
+  if (!tk) {
+    var m = /[?&]token=([^&]+)/.exec(location.search || "");
+    if (m) { tk = decodeURIComponent(m[1]); }
+  }
+
+  var status = document.getElementById("hub-status");
+  var adminLink = document.getElementById("hub-admin");
+
+  function enter() { location.href = "/app/"; }
+
+  document.getElementById("hub-demo").onclick = function () {
+    this.disabled = true;
+    this.querySelector("b").textContent = "Готовим демо-данные…";
+    fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ email: "demo@sociora.ru", password: "demo1234" })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          try { localStorage.setItem(TOKEN_KEY, d.token); } catch (e) {}
+          // токен дублируем в hash: работает, даже если localStorage недоступен
+          location.href = "/app/?token=" + encodeURIComponent(d.token);
+        } else {
+          status.textContent = "Не удалось войти: " + (d.error || "ошибка");
+          this.disabled = false;
+          this.querySelector("b").textContent = "Войти в демо-режим";
+        }
+      })
+      .catch(function () {
+        status.textContent = "Сервер кабинета недоступен. Запустите cabinet_server.py";
+        this.disabled = false;
+      });
+  };
+
+  if (tk) {
+    fetch("/api/me", { headers: { "Authorization": "Bearer " + tk }, credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          status.innerHTML = "Вы уже вошли как <b>" + d.user.email + "</b> — открываем кабинет…";
+          if (d.user.is_admin) adminLink.style.display = "";
+          setTimeout(enter, 900);
+        } else {
+          status.textContent = "Сессия не найдена — войдите заново.";
+        }
+      })
+      .catch(function () { status.textContent = "Выберите способ входа."; });
+  } else {
+    status.textContent = "Выберите способ входа.";
+  }
+})();
+</script>
+</body>
+</html>

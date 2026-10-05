@@ -10,6 +10,14 @@
   var route = "stats";
 
   function getToken() {
+    // токен из query (?token=…) — hash в кабинете занят роутингом
+    var m = /[?&]token=([^&]+)/.exec(location.search || "") ||
+            /[#&]token=([^&]+)/.exec(location.hash || "");
+    if (m) {
+      var t = decodeURIComponent(m[1]);
+      try { localStorage.setItem(TOKEN_KEY, t); } catch (e) {}
+      return t;
+    }
     try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
   }
 
