@@ -53,16 +53,10 @@ sociora/
 ├── assets/
 │   ├── css/styles.css      # дизайн-система (лендинг)
 │   └── js/main.js          # интерактив лендинга
-├── app/                    # личный кабинет (SPA)
-│   ├── index.html          #   каркас
-│   ├── app.js              #   логика (fetch к /api/*)
-│   └── app.css             #   стили кабинета
-├── admin/                  # админ-панель (/admin/)
+├── admin/                  # админ-панель (/admin/), пока не используем
 │   ├── index.html          #   каркас
 │   ├── admin.js            #   статистика, пользователи, посты, платежи
 │   └── admin.css           #   стили
-├── register.html           # страница регистрации
-├── login.html              # страница входа (+ демо-вход)
 ├── *.html                  # страницы лендинга (генерируются build.py)
 ├── data/app.db             # SQLite (создаётся автоматически, в git не попадает)
 └── robots.txt, sitemap.xml, llms.txt, 404.html
@@ -92,7 +86,6 @@ sociora/
 ## API (кратко)
 
 ```
-POST /api/register, /api/login, /api/logout, /api/settings, /api/settings/password
 GET  /api/me
 GET/POST/DELETE /api/projects, /api/projects/{id}, /api/projects/{id}/analyze
 GET/POST /api/posts, /api/posts/generate, /api/posts/{id}, /api/posts/{id}/regenerate,
@@ -100,6 +93,7 @@ GET/POST /api/posts, /api/posts/generate, /api/posts/{id}, /api/posts/{id}/regen
 GET/POST/DELETE /api/socials
 GET  /api/analytics?network=all|telegram|vk|max
 GET/POST /api/tariffs, /api/tariffs/choose, /api/packs/buy, /api/payments
+POST /api/settings          {name, tone}
 POST /api/plan/week
 GET  /api/admin/stats, /api/admin/users, /api/admin/posts, /api/admin/payments
 POST /api/admin/users/{id}   {action: block|plan|balance|admin, ...}
@@ -119,26 +113,26 @@ POST /api/admin/users/{id}   {action: block|plan|balance|admin, ...}
 ## Проверка работоспособности
 
 ```bash
-python3 server.py 8080 &            # в одном терминале
-python3 cabinet_server.py 8081 &    # в другом
-python3 verify.py                   # сайт + кабинет на 8080
-python3 verify_cabinet.py           # отдельный сервер кабинета на 8081
-node tests_token.js                 # логика сессии (localStorage/hash/Bearer)
+python3 server.py 8080              # сайт + API (в одном терминале)
+python3 cabinet_only_server.py 8082 # отдельный сервер кабинета (в другом)
+python3 verify.py http://127.0.0.1:8080   # 101 проверка: сайт, кабинет, API
+node lk/test_views.js               # рендер всех 14 разделов кабинета
 ```
 
 ```
-Итого: 111 проверок, пройдено 111, провалено 0
+Итого: 101 проверок, пройдено 101, провалено 0
+Всё работает: кабинет открывается сразу, без регистрации и входа.
 ```
 
-Проверяется: доступность 25 страниц и ассетов, внутренние ссылки и якоря,
-структура (title/h1/description/cookie), интерактив лендинга, редиректы
-`/app → /app/` и `/admin → /admin/`, наличие кнопки демо-входа и подключение
-админки к API, а также **сквозной API-сценарий**: регистрация → отказ при
-неверном пароле → проект → анализ → генерация (баланс 15→14) → одобрение →
-публикация → перегенерация → соцсеть → лимит trial → аналитика → тариф Pro
-(150 постов) → пакет (+100) → план на неделю → настройки → выход → 401 →
-демо-вход → Bearer-авторизация без cookie → админ-статистика → 403 для
-не-админа → 401 для гостя.
+Проверяется: доступность страниц лендинга и ассетов, внутренние ссылки,
+структура (title/h1/description), интерактив лендинга, редиректы
+`/app → /app/` и `/admin → /admin/`, что на месте `/login` и `/register`
+открывается кабинет (а не формы), кнопка «Новый пост», баланс постов в
+шапке, отдельный сервер кабинета на 8082, а также **сквозной API-сценарий
+без всякой авторизации**: проект → анализ ниши → генерация поста
+(баланс 300→299) → отправка на проверку → публикация → перегенерация →
+постановка в расписание → подключение соцсети → аналитика по сетям → тариф
+→ пакет постов → контент-план на неделю → удаление поста.
 
 ## Как это устроено
 
