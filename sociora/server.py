@@ -129,34 +129,38 @@ def init_db():
     if "blocked" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0")
     conn.commit()
-    seed_demo(conn)
+    owner = ensure_user(conn, OWNER_EMAIL, "Владелец", plan="business")
+    seed_sample_content(conn, owner["id"])
     conn.close()
 
 
-DEMO_EMAIL = "demo@sociora.ru"
-DEMO_PASSWORD = "demo1234"
-ADMIN_EMAIL = "admin@sociora.ru"
-ADMIN_PASSWORD = "admin1234"
+# Регистрация и вход не нужны: кабинет сразу принадлежит одному локальному
+# владельцу. Логин/пароль нигде не запрашиваются и не хранятся в открытом виде.
+OWNER_EMAIL = "owner@sociora.local"
 
 
-def ensure_user(conn, email, name, password, plan="trial", posts=15, is_admin=0):
+def ensure_user(conn, email, name, password=None, plan="trial", posts=15, is_admin=0):
     u = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
     if u:
         return u
+    if not password:
+        password = secrets.token_urlsafe(24)  # пароль не нужен: вход без регистрации
     ph, salt = hash_password(password)
     until = (datetime.now() + timedelta(days=PLANS[plan]["days"])).isoformat(timespec="seconds")
-    cur = conn.execute(
-        "INSERT INTO users (email, name, pass_hash, salt, plan, plan_until, posts_balance, is_admin, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?)",
-        (email, name, ph, salt, plan, until, PLANS[plan]["posts"], is_admin, now_iso()))
+    try:
+        cur = conn.execute(
+            "INSERT INTO users (email, name, pass_hash, salt, plan, plan_until, posts_balance, is_admin, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (email, name, ph, salt, plan, until, PLANS[plan]["posts"], is_admin, now_iso()))
+    except sqlite3.IntegrityError:
+        # Гонка при одновременном старте двух серверов: пользователь уже создан.
+        return conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
     return conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
 
 
-def seed_demo(conn):
-    """Демо- и админ-аккаунты с образцами данных — чтобы можно было войти без регистрации."""
-    demo = ensure_user(conn, DEMO_EMAIL, "Демо Пользователь", DEMO_PASSWORD, plan="business")
-    ensure_user(conn, ADMIN_EMAIL, "Администратор", ADMIN_PASSWORD, plan="business", is_admin=1)
-    has_data = conn.execute("SELECT COUNT(*) c FROM projects WHERE user_id=?", (demo["id"],)).fetchone()["c"]
+def seed_sample_content(conn, user_id):
+    """Наполняет кабинет образцами: 2 проекта, темы, соцсети, посты, платёж."""
+    has_data = conn.execute("SELECT COUNT(*) c FROM projects WHERE user_id=?", (user_id,)).fetchone()["c"]
     if has_data:
         return
     # два демо-проекта с анализом, темами, постами и соцсетями
@@ -167,7 +171,7 @@ def seed_demo(conn):
         analysis = analyze_business(name, niche, website)
         cur = conn.execute(
             "INSERT INTO projects (user_id, name, niche, website, tone, status, analysis, created_at) VALUES (?,?,?,?,?,?,?,?)",
-            (demo["id"], name, niche, website, "дружелюбный", "analyzed",
+            (user_id, name, niche, website, "дружелюбный", "analyzed",
              json.dumps(analysis, ensure_ascii=False),
              (datetime.now() - timedelta(days=3)).isoformat(timespec="seconds")))
         pid = cur.lastrowid
@@ -175,12 +179,15 @@ def seed_demo(conn):
             conn.execute("INSERT INTO themes (project_id, title, rubric) VALUES (?,?,?)",
                          (pid, t["title"], t["rubric"]))
         nets = ["telegram", "vk"]
-        for net, channel in (("telegram", "@" + niche.split()[0] + "_demo"), ("vk", "vk.com/demo")):
-            conn.execute(
-                "INSERT INTO socials (user_id, project_id, network, token, channel, channel_id, created_at) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (demo["id"], pid, net, "demo-token", channel, "ch_" + secrets.token_hex(3),
-                 (datetime.now() - timedelta(days=2)).isoformat(timespec="seconds")))
+        # по одной соцсети на проект: лимит Business — 3 соцсети, остаётся место
+        # для подключения своих каналов прямо из кабинета
+        net = nets[0] if name.startswith("Салон") else nets[1]
+        channel = ("@" + niche.split()[0] + "_demo") if net == "telegram" else "vk.com/demo"
+        conn.execute(
+            "INSERT INTO socials (user_id, project_id, network, token, channel, channel_id, created_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (user_id, pid, net, "demo-token", channel, "ch_" + secrets.token_hex(3),
+             (datetime.now() - timedelta(days=2)).isoformat(timespec="seconds")))
         # генерируем посты разных статусов
         for i in range(6):
             gen = generate_post(niche, tone="дружелюбный")
@@ -191,7 +198,7 @@ def seed_demo(conn):
                 "INSERT INTO posts (user_id, project_id, title, body, image_prompt, rubric, networks, status, "
                 "scheduled_at, published_at, views, likes, comments, reposts, created_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (demo["id"], pid, gen["title"], gen["body"], gen["image_prompt"], gen["rubric"],
+                (user_id, pid, gen["title"], gen["body"], gen["image_prompt"], gen["rubric"],
                  json.dumps(nets if i % 2 == 0 else nets[:1]), status,
                  when if status == "scheduled" else None,
                  now_iso() if status == "published" else None,
@@ -201,7 +208,7 @@ def seed_demo(conn):
                  int(views * random.uniform(0.002, 0.008)) if views else 0,
                  (datetime.now() - timedelta(days=5 - i)).isoformat(timespec="seconds")))
     conn.execute("INSERT INTO payments (user_id, kind, item, amount, period, status, created_at) VALUES (?,?,?,?,?,?,?)",
-                 (demo["id"], "plan", "pro", 4200, "month", "paid",
+                 (user_id, "plan", "pro", 4200, "month", "paid",
                   (datetime.now() - timedelta(days=3)).isoformat(timespec="seconds")))
     conn.commit()
 
@@ -451,12 +458,19 @@ class ApiError(Exception):
         self.status = status
 
 
-def current_user(handler):
-    """Текущий пользователь по cookie или заголовку Authorization: Bearer <token>.
+def owner_user():
+    """Единственный пользователь кабинета — регистрация не нужна."""
+    conn = db()
+    u = conn.execute("SELECT * FROM users WHERE email = ?", (OWNER_EMAIL,)).fetchone()
+    if not u:
+        u = ensure_user(conn, OWNER_EMAIL, "Владелец", plan="business")
+    conn.close()
+    return u
 
-    Bearer нужен потому, что preview-прокси не пробрасывает Set-Cookie браузеру:
-    без токена сессия терялась между загрузками страниц кабинета.
-    """
+
+def current_user(handler):
+    """Кабинет работает без входа: если валидный токен не передан,
+    запрос принадлежит владельцу кабинета."""
     token = None
     cookie = handler.headers.get("Cookie", "")
     for part in cookie.split(";"):
@@ -468,14 +482,15 @@ def current_user(handler):
         auth = handler.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             token = auth[len("Bearer "):].strip()
-    if not token:
-        return None
-    conn = db()
-    row = conn.execute(
-        "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?", (token,)
-    ).fetchone()
-    conn.close()
-    return row
+    if token:
+        conn = db()
+        row = conn.execute(
+            "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?", (token,)
+        ).fetchone()
+        conn.close()
+        if row:
+            return row
+    return owner_user()
 
 
 def require_admin(user):
@@ -521,77 +536,13 @@ def post_dict(p):
 
 # ---------------------------------------------------------------- API-обработчики
 
-def api_register(handler, body):
-    email = (body.get("email") or "").strip().lower()
-    name = (body.get("name") or "").strip()
-    password = body.get("password") or ""
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        raise ApiError("Некорректный email")
-    if len(name) < 2:
-        raise ApiError("Укажите имя (минимум 2 символа)")
-    if len(password) < 6:
-        raise ApiError("Пароль минимум 6 символов")
-    conn = db()
-    if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
-        conn.close()
-        raise ApiError("Такой email уже зарегистрирован — войдите", 409)
-    ph, salt = hash_password(password)
-    trial_until = (datetime.now() + timedelta(days=PLANS["trial"]["days"])).isoformat(timespec="seconds")
-    cur = conn.execute(
-        "INSERT INTO users (email, name, pass_hash, salt, plan, plan_until, posts_balance, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?)",
-        (email, name, ph, salt, "trial", trial_until, PLANS["trial"]["posts"], now_iso()),
-    )
-    token = secrets.token_urlsafe(32)
-    conn.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?,?,?)",
-                 (token, cur.lastrowid, now_iso()))
-    conn.commit()
-    u = conn.execute("SELECT * FROM users WHERE id = ?", (cur.lastrowid,)).fetchone()
-    conn.close()
-    return 200, {"ok": True, "token": token, "user": user_dict(u)}, {"Set-Cookie": "session_token=%s; Path=/; HttpOnly; SameSite=Lax" % token}
-
-
-def api_login(handler, body):
-    email = (body.get("email") or "").strip().lower()
-    password = body.get("password") or ""
-    conn = db()
-    u = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    if not u or not check_password(password, u["salt"], u["pass_hash"]):
-        conn.close()
-        raise ApiError("Неверный email или пароль", 401)
-    if u["blocked"]:
-        conn.close()
-        raise ApiError("Аккаунт заблокирован. Напишите в поддержку: support@sociora.ru", 403)
-    token = secrets.token_urlsafe(32)
-    conn.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?,?,?)",
-                 (token, u["id"], now_iso()))
-    conn.commit()
-    conn.close()
-    return 200, {"ok": True, "token": token, "user": user_dict(u)}, {"Set-Cookie": "session_token=%s; Path=/; HttpOnly; SameSite=Lax" % token}
-
-
-def api_logout(handler, body, user):
-    token = None
-    auth = handler.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        token = auth[len("Bearer "):].strip()
-    for part in handler.headers.get("Cookie", "").split(";"):
-        part = part.strip()
-        if part.startswith("session_token="):
-            token = part[len("session_token="):]
-            break
-    if token:
-        conn = db()
-        conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
-        conn.commit()
-        conn.close()
-    return 200, {"ok": True}, {"Set-Cookie": "session_token=; Path=/; HttpOnly; Max-Age=0"}
-
-
 def api_me(handler, body, user):
     conn = db()
+    posts_all = [dict(r) for r in conn.execute("SELECT status FROM posts WHERE user_id=?", (user["id"],)).fetchall()]
     stats = {
         "projects": conn.execute("SELECT COUNT(*) c FROM projects WHERE user_id=?", (user["id"],)).fetchone()["c"],
+        "posts_total_all": len(posts_all),
+        "posts_approved": len([p for p in posts_all if p["status"] == "approved"]),
         "posts_draft": conn.execute("SELECT COUNT(*) c FROM posts WHERE user_id=? AND status='draft'", (user["id"],)).fetchone()["c"],
         "posts_scheduled": conn.execute("SELECT COUNT(*) c FROM posts WHERE user_id=? AND status='scheduled'", (user["id"],)).fetchone()["c"],
         "posts_published": conn.execute("SELECT COUNT(*) c FROM posts WHERE user_id=? AND status='published'", (user["id"],)).fetchone()["c"],
@@ -1130,9 +1081,6 @@ def api_admin_payments(handler, body, user):
 
 
 API_ROUTES = [
-    ("POST", r"^/api/register$", api_register, False),
-    ("POST", r"^/api/login$", api_login, False),
-    ("POST", r"^/api/logout$", api_logout, False),
     ("GET", r"^/api/me$", api_me, True),
     ("GET", r"^/api/projects$", api_projects_list, True),
     ("POST", r"^/api/projects$", api_project_create, True),
@@ -1272,8 +1220,15 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
-        elif path in ("/app/", "/app/index.html"):
-            self.path = "/app/index.html"
+        elif path in ("/app/", "/app/index.html", "/lk/"):
+            self.path = "/lk/index.html"
+        elif path in ("/login", "/register", "/forgot-password"):
+            # регистрации и входа нет — ведём сразу в кабинет
+            self.send_response(301)
+            self.send_header("Location", "/app/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         elif path == "/admin":
             self.send_response(301)
             self.send_header("Location", "/admin/")
@@ -1302,7 +1257,7 @@ def main():
     print("База данных: %s" % DB_PATH)
     print("Лендинг:      http://127.0.0.1:%d/" % PORT)
     print("Личный кабинет: http://127.0.0.1:%d/app" % PORT)
-    print("Регистрация:  http://127.0.0.1:%d/register" % PORT)
+    print("Регистрация и вход не нужны — кабинет откроется сразу")
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     try:
         httpd.serve_forever()
