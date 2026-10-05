@@ -1,0 +1,45 @@
+/* Админ-панель Sociora — дополнительные стили */
+
+.admin-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #3a2600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-left: 4px;
+  align-self: center;
+}
+
+.side-nav a[data-admin-link] { color: #fbbf24; }
+
+.admin-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+.admin-kpis .kpi-card b { font-size: 24px; }
+.admin-kpis .kpi-card.warn b { color: #f87171; }
+.admin-kpis .kpi-card.good b { color: var(--green); }
+
+.plan-bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,0.06); margin: 10px 0 6px; }
+.plan-bar span { display: block; height: 100%; }
+.plan-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.plan-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.row-actions .btn { padding: 5px 12px; font-size: 12.5px; }
+.row-actions select {
+  background: rgba(0,0,0,0.3);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  font-family: var(--font);
+}
+
+.tag-blocked { color: #f87171; font-weight: 700; font-size: 12.5px; }
+.tag-admin { color: #fbbf24; font-weight: 700; font-size: 12.5px; }
+.tag-ok { color: var(--green); font-weight: 700; font-size: 12.5px; }
+
+@media (max-width: 980px) {
+  .admin-kpis { grid-template-columns: repeat(2, 1fr); }
+}

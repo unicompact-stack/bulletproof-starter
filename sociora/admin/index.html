@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ-панель — Sociora</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0a0a13">
+<meta name="description" content="Админ-панель Sociora: пользователи, тарифы, посты и платежи.">
+<link rel="stylesheet" href="/assets/css/styles.css">
+<link rel="stylesheet" href="/app/app.css">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="app-body">
+<div class="bg-glows"></div>
+
+<div class="admin" id="admin" hidden>
+  <aside class="sidebar">
+    <a class="logo" href="/"><span class="logo-mark">S</span>Sociora <span class="admin-badge">ADMIN</span></a>
+    <nav class="side-nav" id="admin-nav">
+      <a href="#/stats" data-nav="stats" class="active"><span class="ico">📊</span>Статистика</a>
+      <a href="#/users" data-nav="users"><span class="ico">👥</span>Пользователи</a>
+      <a href="#/posts" data-nav="posts"><span class="ico">📝</span>Посты</a>
+      <a href="#/payments" data-nav="payments"><span class="ico">💳</span>Платежи</a>
+    </nav>
+    <div class="side-foot">
+      <a href="/app/" class="to-site">← В кабинет</a>
+      <a href="/" class="to-site">← На сайт</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="burger" id="admin-burger" aria-label="Меню"><span></span><span></span><span></span></button>
+      <div class="topbar-title" id="admin-title">Статистика</div>
+      <div class="topbar-right">
+        <span class="plan-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)">администратор</span>
+        <span class="user-mail" id="admin-user"></span>
+        <button class="btn btn-ghost btn-sm" id="admin-logout">Выйти</button>
+      </div>
+    </header>
+    <main class="content" id="admin-content"><div class="loading">Загрузка…</div></main>
+  </div>
+</div>
+
+<div class="auth-needed" id="admin-denied" hidden>
+  <div class="auth-card">
+    <h1>🛡️ Требуются права администратора</h1>
+    <p id="denied-msg">Эта страница доступна только администратору. Войдите под аккаунтом с правами админа.</p>
+    <div class="auth-actions">
+      <a class="btn btn-primary" href="/login">Войти</a>
+      <a class="btn btn-ghost" href="/">На сайт</a>
+    </div>
+    <p style="margin-top:18px;color:var(--faint);font-size:13px">Демо-доступ: admin@sociora.ru / admin1234</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

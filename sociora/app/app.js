@@ -9,6 +9,18 @@
   var $ = function (sel) { return document.querySelector(sel); };
   var content = $("#content");
 
+  /* ---------- токен сессии (работает, даже если прокси режет Set-Cookie) ---------- */
+  var TOKEN_KEY = "sociora_token";
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  }
+  function setToken(token) {
+    try {
+      if (token) { localStorage.setItem(TOKEN_KEY, token); }
+      else { localStorage.removeItem(TOKEN_KEY); }
+    } catch (e) {}
+  }
+
   /* ---------- утилиты ---------- */
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -37,9 +49,13 @@
   }
 
   function api(method, url, body) {
+    var headers = {};
+    if (body) headers["Content-Type"] = "application/json";
+    var token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
     return fetch(url, {
       method: method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: headers,
       body: body ? JSON.stringify(body) : undefined,
       credentials: "same-origin"
     }).then(function (r) {
@@ -67,6 +83,19 @@
     $("#top-user").title = user.email;
     $("#top-plan").textContent = user.plan_name;
     $("#top-balance").textContent = "⚡ " + fmt(user.posts_balance) + " постов";
+    // ссылка на админку — только для администратора
+    var nav = $("#side-nav");
+    var existing = nav.querySelector("[data-admin-link]");
+    if (user.is_admin && !existing) {
+      var a = document.createElement("a");
+      a.href = "/admin/";
+      a.setAttribute("data-admin-link", "1");
+      a.innerHTML = '<span class="ico">🛡️</span>Админ-панель';
+      a.style.color = "#fbbf24";
+      nav.appendChild(a);
+    } else if (!user.is_admin && existing) {
+      existing.remove();
+    }
   }
 
   function renderTopbar() {
@@ -655,7 +684,13 @@
 
   var logout = $("#btn-logout");
   if (logout) logout.onclick = function () {
-    api("POST", "/api/logout", {}).then(function () { location.href = "/"; }).catch(function () { location.href = "/"; });
+    api("POST", "/api/logout", {}).then(function () {
+      setToken(null);
+      location.href = "/";
+    }).catch(function () {
+      setToken(null);
+      location.href = "/";
+    });
   };
 
   window.addEventListener("hashchange", render);

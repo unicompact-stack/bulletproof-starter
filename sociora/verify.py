@@ -29,14 +29,16 @@ from urllib.request import build_opener, HTTPCookieProcessor, urlopen
 ROOT = Path(__file__).resolve().parent
 
 PAGES = [
-    "index.html", "404.html", "register.html", "login.html", "app/index.html",
+    "index.html", "404.html", "register.html", "login.html",
+    "app/index.html", "admin/index.html",
     "servis-avtopostinga.html", "avtopostng-telegram.html", "avtopostng-vkontakte.html",
     "krosspostng-v-max.html", "krosspostng.html", "neiroset-dlya-postov.html",
     "kontent-plan.html", "oformlenie-postov.html", "zamena-smm.html",
     "analogi-smmplanner.html", "about.html", "contacts.html",
     "offer.html", "privacy.html", "terms.html", "cookies.html", "consent.html",
 ]
-ASSETS = ["assets/css/styles.css", "assets/js/main.js", "app/app.css", "app/app.js"]
+ASSETS = ["assets/css/styles.css", "assets/js/main.js",
+          "app/app.css", "app/app.js", "admin/admin.css", "admin/admin.js"]
 SEO_FILES = ["robots.txt", "sitemap.xml", "llms.txt"]
 
 PASS, FAIL = [], []
@@ -65,6 +67,40 @@ def test_api(base):
             headers={"Content-Type": "application/json"} if data else {})
         try:
             with opener.open(req, timeout=15) as resp:
+                return resp.status, json.loads(resp.read().decode("utf-8"))
+        except HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                return e.code, json.loads(body)
+            except ValueError:
+                return e.code, {"ok": False, "error": body}
+
+    def call_token(method, path, token, payload=None):
+        """Запрос только с Bearer-токеном, без cookie: имитация работы через прокси."""
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = urllib.request.Request(
+            urljoin(base, path), data=data, method=method,
+            headers={"Content-Type": "application/json"} if data else {})
+        req.add_header("Authorization", "Bearer " + token)
+        try:
+            with urlopen(req, timeout=15) as resp:
+                return resp.status, json.loads(resp.read().decode("utf-8"))
+        except HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                return e.code, json.loads(body)
+            except ValueError:
+                return e.code, {"ok": False, "error": body}
+
+    def call_token(method, path, token, payload=None):
+        """Запрос только с Bearer-токеном, без cookie (проверка токен-авторизации)."""
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = urllib.request.Request(
+            urljoin(base, path), data=data, method=method,
+            headers={"Content-Type": "application/json"} if data else {})
+        req.add_header("Authorization", "Bearer " + token)
+        try:
+            with urlopen(req, timeout=15) as resp:
                 return resp.status, json.loads(resp.read().decode("utf-8"))
         except HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
@@ -145,6 +181,46 @@ def test_api(base):
     status, d = call("GET", "/api/me")
     check("API: после выхода доступ закрыт (401)", status == 401 and not d.get("ok"))
 
+    # --- демо-вход без регистрации ---
+    status, d = call("POST", "/api/login", {"email": "demo@sociora.ru", "password": "demo1234"})
+    check("API: демо-вход без регистрации",
+          status == 200 and d.get("ok") and d["user"]["plan"] in ("pro", "business"))
+    demo_token = d.get("token", "")
+
+    status, d = call("GET", "/api/me")
+    check("API: у демо-пользователя есть проекты и опубликованные посты",
+          d["stats"]["projects"] >= 2 and d["stats"]["posts_published"] >= 2)
+
+    # --- авторизация по Bearer-токену: сессия живёт даже без cookie ---
+    status, d = call_token("GET", "/api/me", demo_token)
+    check("API: авторизация по Bearer-токену без cookie",
+          d.get("ok") and d["user"]["email"] == "demo@sociora.ru")
+
+    # --- админ-панель ---
+    status, d = call("POST", "/api/login", {"email": "admin@sociora.ru", "password": "admin1234"})
+    check("API: вход администратора", status == 200 and d.get("ok") and d["user"]["is_admin"])
+
+    status, d = call("GET", "/api/admin/stats")
+    check("API: админ-статистика", d.get("ok") and d["stats"]["users"] >= 2)
+
+    status, d = call("GET", "/api/admin/users")
+    check("API: список пользователей в админке", d.get("ok") and len(d.get("users", [])) >= 2)
+
+    status, d = call("GET", "/api/admin/posts")
+    check("API: все посты в админке", d.get("ok"))
+
+    status, d = call("GET", "/api/admin/payments")
+    check("API: все платежи в админке", d.get("ok"))
+
+    # --- обычный пользователь не попадает в админку ---
+    status, d = call("POST", "/api/login", {"email": "demo@sociora.ru", "password": "demo1234"})
+    status, d = call("GET", "/api/admin/stats")
+    check("API: не-админ получает 403 в админке", status == 403 and not d.get("ok"))
+
+    call("POST", "/api/logout")  # выходим, чтобы проверить доступ без сессии
+    status, d = call("GET", "/api/admin/stats")
+    check("API: админка закрыта для гостей (401)", status == 401 and not d.get("ok"))
+
 
 def main():
     base = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8080"
@@ -179,7 +255,7 @@ def main():
     check("sitemap.xml validen (urlset)", "<urlset" in sitemap and sitemap.count("<url>") >= 13)
 
     # 4. Структура страниц
-    NO_COOKIE = {"register.html", "login.html", "app/index.html"}
+    NO_COOKIE = {"register.html", "login.html", "app/index.html", "admin/index.html"}
     for p, text in contents.items():
         if not text:
             continue
@@ -190,6 +266,21 @@ def main():
         check("%s: title/h1/description/cookie" % p,
               has_title and has_h1 and has_desc and has_cookie,
               "title=%s h1=%s desc=%s cookie=%s" % (has_title, has_h1, has_desc, has_cookie))
+
+    # 4.1 Демо-вход без регистрации и админ-панель
+    login_html = contents.get("login.html", "")
+    check("login.html: есть кнопка входа в демо-режиме",
+          "Войти в демо-режиме" in login_html and "demo@sociora.ru" in login_html)
+    admin_html = contents.get("admin/index.html", "")
+    check("admin/index.html: подключены стили и скрипты админки",
+          "/admin/admin.css" in admin_html and "/admin/admin.js" in admin_html)
+    admin_js = ""
+    try:
+        status, admin_js = fetch(base, "admin/admin.js")
+    except (URLError, HTTPError, OSError):
+        admin_js = ""
+    check("admin/admin.js: обращается к API админки",
+          "/api/admin/stats" in admin_js and "/api/admin/users" in admin_js)
 
     # 5. Внутренние ссылки и якоря
     ids_cache = {}
@@ -269,13 +360,28 @@ def main():
             return None
 
     no_redirect = build_opener(NoRedirect)
-    try:
-        with no_redirect.open(urljoin(base, "/app"), timeout=15) as resp:
-            loc, code = resp.headers.get("Location"), resp.status
-    except HTTPError as e:
-        loc, code = e.headers.get("Location"), e.code
+
+    def redirect_check(path):
+        try:
+            with no_redirect.open(urljoin(base, path), timeout=15) as resp:
+                return resp.headers.get("Location"), resp.status
+        except HTTPError as e:
+            return e.headers.get("Location"), e.code
+
+    loc, code = redirect_check("/app")
     check("/app редиректит на /app/ (301)", code == 301 and loc == "/app/",
           "code=%s location=%s" % (code, loc))
+
+    loc, code = redirect_check("/admin")
+    check("/admin редиректит на /admin/ (301)", code == 301 and loc == "/admin/",
+          "code=%s location=%s" % (code, loc))
+
+    for asset in ("/admin/admin.css", "/admin/admin.js"):
+        try:
+            status, _ = fetch(base, asset.lstrip("/"))
+            check("админка: ассет %s доступен" % asset, status == 200)
+        except (URLError, HTTPError, OSError) as e:
+            check("админка: ассет %s доступен" % asset, False, str(e))
 
     app_html = contents.get("app/index.html", "")
     rel_assets = re.findall(r'(?:href|src)="((?:\.\./)?(?:assets|app)[^"]*)"', app_html)

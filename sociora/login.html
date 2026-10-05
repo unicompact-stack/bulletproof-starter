@@ -30,6 +30,12 @@
         </div>
         <button class="btn btn-primary btn-block" type="submit" id="btn-submit">Войти</button>
       </form>
+      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--faint);font-size:12.5px">
+        <span style="flex:1;height:1px;background:var(--border)"></span>или<span style="flex:1;height:1px;background:var(--border)"></span>
+      </div>
+      <div id="demo">
+        <button class="btn btn-ghost btn-block" id="btn-demo" type="button">🚀 Войти в демо-режиме (без регистрации)</button>
+      </div>
       <div class="auth-switch">Нет аккаунта? <a href="/register">Зарегистрироваться</a></div>
     </div>
   </div>
@@ -45,30 +51,61 @@
     error.classList.add("show");
   }
 
-  fetch("/api/me", { credentials: "same-origin" })
-    .then(function (r) { return r.json(); })
-    .then(function (d) { if (d.ok) location.replace("/app"); })
-    .catch(function () {});
+  // если токен уже сохранён (даже если cookie потерялись) — сразу ведём в кабинет
+  var saved = null;
+  try { saved = localStorage.getItem("sociora_token"); } catch (e) {}
+  if (saved) {
+    fetch("/api/me", { headers: { "Authorization": "Bearer " + saved }, credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d.ok) location.replace("/app/"); })
+      .catch(function () {});
+  } else {
+    fetch("/api/me", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d.ok) location.replace("/app/"); })
+      .catch(function () {});
+  }
 
   form.onsubmit = function (e) {
     e.preventDefault();
     error.classList.remove("show");
     btn.disabled = true;
     btn.textContent = "Входим…";
+    doLogin(form.email.value.trim(), form.password.value);
+  };
+
+  // переход по ссылке /login#demo — сразу входим в демо-режим
+  if (location.hash === "#demo") {
+    setTimeout(function () { document.getElementById("btn-demo").click(); }, 150);
+  }
+
+  document.getElementById("btn-demo").onclick = function () {
+    this.disabled = true;
+    this.textContent = "Готовим демо-данные…";
+    error.classList.remove("show");
+    doLogin("demo@sociora.ru", "demo1234");
+  };
+
+  function doLogin(email, password) {
     fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ email: form.email.value.trim(), password: form.password.value })
+      body: JSON.stringify({ email: email, password: password })
     })
       .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
       .then(function (res) {
         if (res.data.ok) {
-          location.href = "/app";
+          // сохраняем токен: даже если прокси не отдаёт cookie, сессия работает
+          try { localStorage.setItem("sociora_token", res.data.token); } catch (e) {}
+          location.href = "/app/";
         } else {
           showError(res.data.error || "Неверный email или пароль");
           btn.disabled = false;
           btn.textContent = "Войти";
+          var demo = document.getElementById("btn-demo");
+          demo.disabled = false;
+          demo.textContent = "🚀 Войти в демо-режиме (без регистрации)";
         }
       })
       .catch(function () {
@@ -76,7 +113,7 @@
         btn.disabled = false;
         btn.textContent = "Войти";
       });
-  };
+  }
 })();
 </script>
 </body>

@@ -73,7 +73,9 @@
       .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
       .then(function (res) {
         if (res.data.ok) {
-          location.href = "/app";
+          // сохраняем токен: даже если прокси не отдаёт cookie, сессия работает
+          try { localStorage.setItem("sociora_token", res.data.token); } catch (e) {}
+          location.href = "/app/";
         } else {
           showError(res.data.error || "Не удалось зарегистрироваться");
           btn.disabled = false;

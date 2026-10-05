@@ -122,8 +122,88 @@ def init_db():
     DATA_DIR.mkdir(exist_ok=True)
     conn = db()
     conn.executescript(SCHEMA)
+    # миграции для существующих баз
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if "is_admin" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+    if "blocked" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0")
     conn.commit()
+    seed_demo(conn)
     conn.close()
+
+
+DEMO_EMAIL = "demo@sociora.ru"
+DEMO_PASSWORD = "demo1234"
+ADMIN_EMAIL = "admin@sociora.ru"
+ADMIN_PASSWORD = "admin1234"
+
+
+def ensure_user(conn, email, name, password, plan="trial", posts=15, is_admin=0):
+    u = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    if u:
+        return u
+    ph, salt = hash_password(password)
+    until = (datetime.now() + timedelta(days=PLANS[plan]["days"])).isoformat(timespec="seconds")
+    cur = conn.execute(
+        "INSERT INTO users (email, name, pass_hash, salt, plan, plan_until, posts_balance, is_admin, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+        (email, name, ph, salt, plan, until, PLANS[plan]["posts"], is_admin, now_iso()))
+    return conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+
+
+def seed_demo(conn):
+    """Демо- и админ-аккаунты с образцами данных — чтобы можно было войти без регистрации."""
+    demo = ensure_user(conn, DEMO_EMAIL, "Демо Пользователь", DEMO_PASSWORD, plan="business")
+    ensure_user(conn, ADMIN_EMAIL, "Администратор", ADMIN_PASSWORD, plan="business", is_admin=1)
+    has_data = conn.execute("SELECT COUNT(*) c FROM projects WHERE user_id=?", (demo["id"],)).fetchone()["c"]
+    if has_data:
+        return
+    # два демо-проекта с анализом, темами, постами и соцсетями
+    for name, niche, website in [
+        ("Салон Лилия", "салон красоты", "https://liliya.example"),
+        ("Кофейня Тёпло", "кофейня", "https://teplo.example"),
+    ]:
+        analysis = analyze_business(name, niche, website)
+        cur = conn.execute(
+            "INSERT INTO projects (user_id, name, niche, website, tone, status, analysis, created_at) VALUES (?,?,?,?,?,?,?,?)",
+            (demo["id"], name, niche, website, "дружелюбный", "analyzed",
+             json.dumps(analysis, ensure_ascii=False),
+             (datetime.now() - timedelta(days=3)).isoformat(timespec="seconds")))
+        pid = cur.lastrowid
+        for t in analysis["themes"][:10]:
+            conn.execute("INSERT INTO themes (project_id, title, rubric) VALUES (?,?,?)",
+                         (pid, t["title"], t["rubric"]))
+        nets = ["telegram", "vk"]
+        for net, channel in (("telegram", "@" + niche.split()[0] + "_demo"), ("vk", "vk.com/demo")):
+            conn.execute(
+                "INSERT INTO socials (user_id, project_id, network, token, channel, channel_id, created_at) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (demo["id"], pid, net, "demo-token", channel, "ch_" + secrets.token_hex(3),
+                 (datetime.now() - timedelta(days=2)).isoformat(timespec="seconds")))
+        # генерируем посты разных статусов
+        for i in range(6):
+            gen = generate_post(niche, tone="дружелюбный")
+            status = ["draft", "approved", "scheduled", "published", "published", "draft"][i]
+            when = (datetime.now() + timedelta(days=i)).isoformat(timespec="minutes")
+            views = random.randint(120, 1400) if status == "published" else 0
+            conn.execute(
+                "INSERT INTO posts (user_id, project_id, title, body, image_prompt, rubric, networks, status, "
+                "scheduled_at, published_at, views, likes, comments, reposts, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (demo["id"], pid, gen["title"], gen["body"], gen["image_prompt"], gen["rubric"],
+                 json.dumps(nets if i % 2 == 0 else nets[:1]), status,
+                 when if status == "scheduled" else None,
+                 now_iso() if status == "published" else None,
+                 views,
+                 int(views * random.uniform(0.02, 0.06)) if views else 0,
+                 int(views * random.uniform(0.004, 0.012)) if views else 0,
+                 int(views * random.uniform(0.002, 0.008)) if views else 0,
+                 (datetime.now() - timedelta(days=5 - i)).isoformat(timespec="seconds")))
+    conn.execute("INSERT INTO payments (user_id, kind, item, amount, period, status, created_at) VALUES (?,?,?,?,?,?,?)",
+                 (demo["id"], "plan", "pro", 4200, "month", "paid",
+                  (datetime.now() - timedelta(days=3)).isoformat(timespec="seconds")))
+    conn.commit()
 
 
 def now_iso():
@@ -372,12 +452,22 @@ class ApiError(Exception):
 
 
 def current_user(handler):
-    cookie = handler.headers.get("Cookie", "")
+    """Текущий пользователь по cookie или заголовку Authorization: Bearer <token>.
+
+    Bearer нужен потому, что preview-прокси не пробрасывает Set-Cookie браузеру:
+    без токена сессия терялась между загрузками страниц кабинета.
+    """
     token = None
+    cookie = handler.headers.get("Cookie", "")
     for part in cookie.split(";"):
         part = part.strip()
         if part.startswith("session_token="):
             token = part[len("session_token="):]
+            break
+    if not token:
+        auth = handler.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[len("Bearer "):].strip()
     if not token:
         return None
     conn = db()
@@ -386,6 +476,12 @@ def current_user(handler):
     ).fetchone()
     conn.close()
     return row
+
+
+def require_admin(user):
+    if not user or not user["is_admin"]:
+        raise ApiError("Доступно только администратору", 403)
+    return user
 
 
 def user_dict(u):
@@ -402,6 +498,7 @@ def user_dict(u):
         "id": u["id"], "email": u["email"], "name": u["name"],
         "plan": u["plan"], "plan_name": plan["name"], "plan_desc": plan["desc"],
         "plan_active": active, "days_left": days_left,
+        "is_admin": bool(u["is_admin"]), "blocked": bool(u["blocked"]),
         "posts_balance": u["posts_balance"], "posts_total": u["posts_total"],
         "tone": u["tone"], "created_at": u["created_at"],
         "limits": {k: plan[k] for k in ("posts", "socials", "projects", "themes")},
@@ -462,6 +559,9 @@ def api_login(handler, body):
     if not u or not check_password(password, u["salt"], u["pass_hash"]):
         conn.close()
         raise ApiError("Неверный email или пароль", 401)
+    if u["blocked"]:
+        conn.close()
+        raise ApiError("Аккаунт заблокирован. Напишите в поддержку: support@sociora.ru", 403)
     token = secrets.token_urlsafe(32)
     conn.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?,?,?)",
                  (token, u["id"], now_iso()))
@@ -471,15 +571,20 @@ def api_login(handler, body):
 
 
 def api_logout(handler, body, user):
-    cookie = handler.headers.get("Cookie", "")
-    for part in cookie.split(";"):
+    token = None
+    auth = handler.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[len("Bearer "):].strip()
+    for part in handler.headers.get("Cookie", "").split(";"):
         part = part.strip()
         if part.startswith("session_token="):
             token = part[len("session_token="):]
-            conn = db()
-            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
-            conn.commit()
-            conn.close()
+            break
+    if token:
+        conn = db()
+        conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        conn.commit()
+        conn.close()
     return 200, {"ok": True}, {"Set-Cookie": "session_token=; Path=/; HttpOnly; Max-Age=0"}
 
 
@@ -922,6 +1027,108 @@ def api_week_plan(handler, body, user):
 
 # ---------------------------------------------------------------- маршрутизация
 
+
+# ---------------------------------------------------------------- Админ-панель
+
+def api_admin_stats(handler, body, user):
+    require_admin(user)
+    conn = db()
+    def one(sql):
+        return conn.execute(sql).fetchone()[0]
+    stats = {
+        "users": one("SELECT COUNT(*) FROM users"),
+        "blocked": one("SELECT COUNT(*) FROM users WHERE blocked = 1"),
+        "projects": one("SELECT COUNT(*) FROM projects"),
+        "posts": one("SELECT COUNT(*) FROM posts"),
+        "published": one("SELECT COUNT(*) FROM posts WHERE status = 'published'"),
+        "socials": one("SELECT COUNT(*) FROM socials"),
+        "views": one("SELECT COALESCE(SUM(views),0) FROM posts"),
+        "revenue": one("SELECT COALESCE(SUM(amount),0) FROM payments"),
+    }
+    stats["by_plan"] = {}
+    for p in PLANS:
+        stats["by_plan"][p] = one("SELECT COUNT(*) FROM users WHERE plan = '%s'" % p)
+    stats["recent_users"] = [dict(r) for r in conn.execute(
+        "SELECT id, email, name, plan, created_at FROM users ORDER BY id DESC LIMIT 10")]
+    conn.close()
+    return 200, {"ok": True, "stats": stats}
+
+
+def api_admin_users(handler, body, user):
+    require_admin(user)
+    conn = db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT u.*, (SELECT COUNT(*) FROM projects p WHERE p.user_id = u.id) AS projects, "
+        "(SELECT COUNT(*) FROM posts t WHERE t.user_id = u.id) AS posts "
+        "FROM users u ORDER BY u.id DESC")]
+    conn.close()
+    return 200, {"ok": True, "users": rows}
+
+
+def api_admin_user_action(handler, body, user, user_id):
+    require_admin(user)
+    action = body.get("action")
+    conn = db()
+    target = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        conn.close()
+        raise ApiError("Пользователь не найден", 404)
+    message = ""
+    if action == "block":
+        conn.execute("UPDATE users SET blocked = ? WHERE id = ?", (1 if body.get("blocked") else 0, user_id))
+        message = "Аккаунт %s %s" % (target["email"], "заблокирован" if body.get("blocked") else "разблокирован")
+        # закрываем все сессии заблокированного
+        if body.get("blocked"):
+            conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    elif action == "plan":
+        plan = body.get("plan")
+        if plan not in PLANS:
+            conn.close()
+            raise ApiError("Неизвестный тариф", 400)
+        until = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S") if plan != "trial" else None
+        conn.execute("UPDATE users SET plan = ?, plan_until = ?, posts_balance = posts_balance + ? WHERE id = ?",
+                     (plan, until, PLANS[plan]["posts"], user_id))
+        message = "Тариф для %s изменён на %s (+%d постов)" % (target["email"], plan, PLANS[plan]["posts"])
+    elif action == "balance":
+        delta = int(body.get("posts", 0))
+        conn.execute("UPDATE users SET posts_balance = MAX(0, posts_balance + ?) WHERE id = ?", (delta, user_id))
+        message = "Баланс %s изменён на %+d постов" % (target["email"], delta)
+    elif action == "admin":
+        new_val = 0 if target["is_admin"] else 1
+        if target["id"] == user["id"] and new_val == 0:
+            conn.close()
+            raise ApiError("Нельзя снять права администратора с самого себя", 400)
+        conn.execute("UPDATE users SET is_admin = ? WHERE id = ?", (new_val, user_id))
+        message = "Права администратора для %s: %s" % (target["email"], "выданы" if new_val else "сняты")
+    else:
+        conn.close()
+        raise ApiError("Неизвестное действие", 400)
+    conn.commit()
+    conn.close()
+    return 200, {"ok": True, "message": message}
+
+
+def api_admin_posts(handler, body, user):
+    require_admin(user)
+    conn = db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT t.*, u.email AS user_email, p.name AS project_name FROM posts t "
+        "LEFT JOIN users u ON u.id = t.user_id LEFT JOIN projects p ON p.id = t.project_id "
+        "ORDER BY t.id DESC LIMIT 200")]
+    conn.close()
+    return 200, {"ok": True, "posts": rows}
+
+
+def api_admin_payments(handler, body, user):
+    require_admin(user)
+    conn = db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT pay.*, u.email AS user_email FROM payments pay "
+        "LEFT JOIN users u ON u.id = pay.user_id ORDER BY pay.id DESC LIMIT 200")]
+    conn.close()
+    return 200, {"ok": True, "payments": rows}
+
+
 API_ROUTES = [
     ("POST", r"^/api/register$", api_register, False),
     ("POST", r"^/api/login$", api_login, False),
@@ -949,6 +1156,11 @@ API_ROUTES = [
     ("POST", r"^/api/settings$", api_settings_update, True),
     ("POST", r"^/api/settings/password$", api_change_password, True),
     ("POST", r"^/api/plan/week$", api_week_plan, True),
+    ("GET", r"^/api/admin/stats$", api_admin_stats, True),
+    ("GET", r"^/api/admin/users$", api_admin_users, True),
+    ("POST", r"^/api/admin/users/(\d+)$", api_admin_user_action, True),
+    ("GET", r"^/api/admin/posts$", api_admin_posts, True),
+    ("GET", r"^/api/admin/payments$", api_admin_payments, True),
 ]
 
 
@@ -1011,7 +1223,7 @@ class Handler(SimpleHTTPRequestHandler):
                         args.append(user)
                     elif name == "query":
                         args.append(query)
-                    elif name in ("project_id", "post_id", "social_id"):
+                    elif name in ("project_id", "post_id", "social_id", "user_id"):
                         args.append(int(m.group(1)))
                 result = fn(*args)
                 if isinstance(result, tuple):
@@ -1060,8 +1272,16 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
-        elif path == "/app/":
+        elif path in ("/app/", "/app/index.html"):
             self.path = "/app/index.html"
+        elif path == "/admin":
+            self.send_response(301)
+            self.send_header("Location", "/admin/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        elif path in ("/admin/", "/admin/index.html"):
+            self.path = "/admin/index.html"
         elif not Path(path).suffix:
             candidate = ROOT / (path.lstrip("/") + ".html")
             if candidate.exists():
