@@ -20,3 +20,6 @@ __pycache__/
 # Logs
 *.log
 *.pid
+
+# Локальная база копии Sociora
+sociora/data/
