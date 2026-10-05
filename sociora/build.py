@@ -20,9 +20,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT
 
-REGISTER_URL = "https://app.sociora.ru/register"
+REGISTER_URL = "/register"          # локальная регистрация (копия)
+LOGIN_URL = "/login"
+APP_URL = "/app"
 SUPPORT_TG = "https://t.me/sociora_support"
 SITE = "https://sociora.ru"
+APP_SITE = "https://app.sociora.ru"
 
 # ------------------------------------------------------------
 # Карта страниц: (slug, md-файл, title, description, freq, priority)
@@ -132,19 +135,22 @@ def esc(s):
 
 
 def local_url(url):
-    """Преобразует ссылку sociora.ru в локальный файл копии."""
-    if not url.startswith(SITE):
+    """Преобразует ссылку sociora.ru / app.sociora.ru в локальный файл копии."""
+    if url.startswith(SITE):
+        path = url[len(SITE):]
+    elif url.startswith(APP_SITE):
+        path = url[len(APP_SITE):]
+    else:
         return url
-    path = url[len(SITE):]
     path = path.strip("/")
     if not path:
         return "index.html"
     if path.startswith("#"):
         return "index.html" + path
-    path = path.split("#", 1)[0]
     anchor = ""
-    if "#" in url:
-        anchor = "#" + url.split("#", 1)[1]
+    if "#" in path:
+        path, anchor = path.split("#", 1)
+        anchor = "#" + anchor
     slug = path[:-1] if path.endswith("/") else path
     if slug.endswith(".html"):
         slug = slug[:-5]
@@ -325,15 +331,17 @@ def header(nav, home):
     <a class="logo" href="{home}"><span class="logo-mark">S</span>Sociora</a>
     <nav class="nav">{links}</nav>
     <div class="header-actions">
-      <a class="btn btn-primary btn-sm" href="{reg}" target="_blank" rel="noopener">Попробовать бесплатно</a>
+      <a class="btn btn-ghost btn-sm" href="{login}">Войти</a>
+      <a class="btn btn-primary btn-sm" href="{reg}">Попробовать бесплатно</a>
     </div>
     <button class="burger" aria-label="Меню" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
   <nav class="mobile-nav">{links}
-    <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Попробовать бесплатно</a>
+    <a class="btn btn-primary" href="{reg}">Попробовать бесплатно</a>
+    <a class="btn btn-ghost" href="{login}">Войти</a>
   </nav>
 </header>
-""".format(links=links, home=home, reg=REGISTER_URL)
+""".format(links=links, home=home, reg=REGISTER_URL, login=LOGIN_URL)
 
 
 def footer():
@@ -617,13 +625,13 @@ def build_landing():
   <div class="price-line"><span class="amount" data-price data-monthly="{m}" data-yearly="{y}">{m_fmt}</span><span class="cur">₽</span></div>
   <div class="price-sub" data-price-sub>в месяц · {per}</div>
   <ul>{items}</ul>
-  <a class="btn {btn_cls} btn-block" href="{reg}" target="_blank" rel="noopener">{cta}</a>
+  <a class="btn {btn_cls} btn-block" href="{reg}?plan={plan_key}">{cta}</a>
 </div>""".format(
             pop=" popular" if p["popular"] else "",
             tag='<span class="price-tag">Самый популярный</span>' if p["popular"] else "",
             name=p["name"], for_=p["for"], m=p["monthly"], y=p["yearly"],
             m_fmt="{:,}".format(p["monthly"]).replace(",", " "),
-            per=p["per"], items=items, reg=REGISTER_URL,
+            per=p["per"], items=items, reg=REGISTER_URL, plan_key=p["name"].lower(),
             btn_cls="btn-primary" if p["popular"] else "btn-ghost", cta=p["cta"],
         ))
     pricing_cards = "".join(plans)
@@ -646,7 +654,7 @@ def build_landing():
     <h1>Контент в соцсетях<br><span class="grad">за 3 минуты в день</span></h1>
     <p class="hero-sub">ИИ-агент сам пишет посты, генерит картинки и публикует в Telegram, ВКонтакте и MAX по расписанию. Без копирайтеров. Без дизайнеров. Без головной боли.</p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Попробовать 7 дней бесплатно</a>
+      <a class="btn btn-primary" href="{reg}">Попробовать 7 дней бесплатно</a>
       <a class="btn btn-ghost" href="#demo">Сгенерировать пост</a>
     </div>
     <p class="hero-note">✓ Без привязки карты &nbsp;·&nbsp; ✓ Отмена в любой момент &nbsp;·&nbsp; ✓ 15 постов в подарок</p>
@@ -729,7 +737,7 @@ def build_landing():
         <h2 style="font-size:clamp(26px,4vw,38px);letter-spacing:-0.02em;margin-bottom:16px">Пишет в вашем стиле, а не шаблонно</h2>
         <p style="color:var(--muted);font-size:16.5px">Sociora изучает посты вашего канала — и те, что уже выходили, и новые — смотрит, что заходит аудитории, и пишет дальше в том же духе: вашим тоном, на ваши темы, теми приёмами, что дают отклик.</p>
         <ul style="display:grid;gap:12px;margin:22px 0 28px">{learning}</ul>
-        <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Попробовать бесплатно</a>
+        <a class="btn btn-primary" href="{reg}">Попробовать бесплатно</a>
       </div>
       <div class="analytics reveal">
         <div class="voice" style="margin:0;border:0;padding:0">
@@ -777,7 +785,7 @@ def build_landing():
           <div class="tg-actions"><span>👁 1 247</span><span>❤️ 38</span><span>🔁 12</span><span>💬 7</span></div>
         </div>
         <div class="demo-actions">
-          <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Получить 15 постов бесплатно</a>
+          <a class="btn btn-primary" href="{reg}">Получить 15 постов бесплатно</a>
           <button class="btn btn-ghost" data-demo-regen>🔄 Перегенерировать</button>
         </div>
       </div>
@@ -819,7 +827,7 @@ def build_landing():
       </div>
     </div>
     <div style="text-align:center;margin-top:36px" class="reveal">
-      <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Хочу так же</a>
+      <a class="btn btn-primary" href="{reg}">Хочу так же</a>
       <p class="hero-note" style="margin:14px 0 0">7 дней бесплатно. Без карты.</p>
     </div>
   </div>
@@ -844,7 +852,7 @@ def build_landing():
         <h3>🎁 Trial — 7 дней бесплатно</h3>
         <p>15 постов в подарок · 1 соцсеть · без карты</p>
       </div>
-      <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Начать бесплатно</a>
+      <a class="btn btn-primary" href="{reg}">Начать бесплатно</a>
     </div>
     <div class="packs">
       <h3 class="reveal">Не хватает постов? Купите пакет</h3>
@@ -871,7 +879,7 @@ def build_landing():
     <div class="reveal">
       <h2>Соцсети будут вести себя сами</h2>
       <p>Пока вы спите, обедаете и работаете — контент идёт в TG, VK и MAX по расписанию.</p>
-      <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Начать бесплатно</a>
+      <a class="btn btn-primary" href="{reg}">Начать бесплатно</a>
       <div class="perks">
         <div class="perk"><span class="ico">🎁</span><div><b>7 дней бесплатно</b><br>15 постов в подарок</div></div>
         <div class="perk"><span class="ico">💳</span><div><b>Без карты</b><br>Не просим её при регистрации</div></div>
@@ -898,7 +906,7 @@ CTA_BLOCK = """
 <div class="cta-inline">
   <h3>Попробуйте Sociora бесплатно</h3>
   <p>7 дней trial, 15 постов в подарок, без привязки карты. Запуск за 5 минут.</p>
-  <a class="btn btn-primary" href="{reg}" target="_blank" rel="noopener">Зарегистрироваться</a>
+  <a class="btn btn-primary" href="{reg}">Зарегистрироваться</a>
 </div>
 """.format(reg=REGISTER_URL)
 
