@@ -263,6 +263,31 @@ def main():
               "<form" in text and 'action' not in text and "/api/" in text,
               "form=%s api=%s" % ("<form" in text, "/api/" in text))
 
+    # 7.1 Кабинет: редирект, абсолютные пути, доступность ассетов
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    no_redirect = build_opener(NoRedirect)
+    try:
+        with no_redirect.open(urljoin(base, "/app"), timeout=15) as resp:
+            loc, code = resp.headers.get("Location"), resp.status
+    except HTTPError as e:
+        loc, code = e.headers.get("Location"), e.code
+    check("/app редиректит на /app/ (301)", code == 301 and loc == "/app/",
+          "code=%s location=%s" % (code, loc))
+
+    app_html = contents.get("app/index.html", "")
+    rel_assets = re.findall(r'(?:href|src)="((?:\.\./)?(?:assets|app)[^"]*)"', app_html)
+    check("кабинет: ассеты подключены абсолютными путями", not rel_assets,
+          "; ".join(rel_assets[:3]))
+    for asset in ("/assets/css/styles.css", "/app/app.css", "/app/app.js"):
+        try:
+            status, _ = fetch(base, asset.lstrip("/"))
+            check("кабинет: ассет %s доступен" % asset, status == 200)
+        except (URLError, HTTPError, OSError) as e:
+            check("кабинет: ассет %s доступен" % asset, False, str(e))
+
     # 8. Сквозной тест API личного кабинета
     print()
     test_api(base)

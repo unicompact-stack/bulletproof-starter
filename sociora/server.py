@@ -1054,6 +1054,13 @@ class Handler(SimpleHTTPRequestHandler):
         if path in ("/", ""):
             self.path = "/index.html"
         elif path == "/app":
+            # канонический URL кабинета — со слешом (иначе относительные пути ломаются)
+            self.send_response(301)
+            self.send_header("Location", "/app/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        elif path == "/app/":
             self.path = "/app/index.html"
         elif not Path(path).suffix:
             candidate = ROOT / (path.lstrip("/") + ".html")
