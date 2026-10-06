@@ -1,0 +1,18 @@
+{
+  "name": "apple-3d-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Эксперимент: плоские анимированные герои (2D) — Яблочкин и Кролик",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/nunito": "^5.2.8"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2"
+  }
+}

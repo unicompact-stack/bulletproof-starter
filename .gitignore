@@ -20,3 +20,8 @@ __pycache__/
 # Logs
 *.log
 *.pid
+
+# Build & deps
+node_modules/
+dist/
+*.log
