@@ -1,0 +1,8 @@
+const phoneModal = document.getElementById('phoneModal');
+const phoneQr = document.getElementById('phoneQr');
+const phoneUrl = document.getElementById('phoneUrl');
+const phoneState = document.getElementById('phoneState');
+let phoneConnected = false;
+async function openPhoneModal(){ phoneModal.classList.add('open'); try { const info=await fetch('/api/info').then(r=>r.json()); phoneUrl.textContent=info.phoneUrl; phoneQr.src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(info.phoneUrl); phoneState.textContent='Откройте камеру Android и наведите на QR-код'; } catch(e) { phoneState.textContent='Сервер не запущен в режиме телефона'; } }
+async function pollPhone(){ try { const s=await fetch('/api/state?time='+Date.now()).then(r=>r.json()); if(s.lastSeen && Date.now()-s.lastSeen<3500){ phoneConnected=true; phoneState.textContent='Телефон подключён'; document.getElementById('statusText').textContent='Телефон подключён'; document.querySelector('.status-dot').classList.add('live'); if(window.gameInput){window.gameInput.onMove({x:s.x,y:s.y});if(s.fire&&window.gameInput.onFire)window.gameInput.onFire({x:s.x,y:s.y});} } else if(phoneConnected){phoneState.textContent='Телефон не отвечает';} }catch(e){} setTimeout(pollPhone,120); }
+document.getElementById('connectPhone').addEventListener('click',openPhoneModal);document.getElementById('closePhone').addEventListener('click',()=>phoneModal.classList.remove('open'));document.getElementById('phoneModal').addEventListener('click',e=>{if(e.target===phoneModal)phoneModal.classList.remove('open')});pollPhone();

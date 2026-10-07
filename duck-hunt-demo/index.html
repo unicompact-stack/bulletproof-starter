@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Тир — утка в прицеле</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">ПРОТОТИП • МЫШЬ</p>
+        <h1>Тир: утка в прицеле</h1>
+      </div>
+      <div class="top-actions"><div class="status"><span class="status-dot"></span><span id="statusText">Готово к старту</span></div><button id="connectPhone" class="phone-button">▣ Подключить телефон</button></div>
+    </header>
+
+    <section class="game-card" aria-label="Игровой тир">
+      <div class="scorebar">
+        <div class="metric"><span>Счёт</span><strong id="score">0000</strong></div>
+        <div class="metric"><span>Раунд</span><strong id="round">1 / 5</strong></div>
+        <div class="metric"><span>Патроны</span><strong id="ammo">3</strong><small>/ 3</small></div>
+        <div class="metric best"><span>Лучший результат</span><strong id="best">0000</strong></div>
+        <div class="arcade-controls"><button class="icon-button" id="soundButton" title="Включить или выключить звук">🔊 звук</button><button class="icon-button" id="pauseButton" title="Пауза" disabled>Ⅱ пауза</button></div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gameCanvas" aria-label="Игровое поле. Двигайте мышь для прицеливания и нажимайте для выстрела"></canvas>
+        <div class="aim-hint" id="aimHint"><span class="mouse-icon">⌁</span><b>Нажмите «Старт»</b><span>затем цельтесь мышью и кликайте</span></div>
+        <div class="shot-flash" id="shotFlash"></div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="startButton">Начать игру <span>→</span></button>
+        <button class="secondary" id="resetButton">Сбросить</button>
+        <p class="message" id="message">Попадите по утке до того, как она улетит.</p>
+      </div>
+      <div class="round-progress"><span>ПРОГРЕСС СТАИ</span><div id="roundProgress" class="progress-dots"></div><b id="waveLabel">2 цели в первой стае</b></div>
+    </section>
+
+    <section class="info-grid">
+      <article><span class="info-number">01</span><div><h2>Как играть</h2><p>Запустите раунд, наведите прицел и кликните по утке. За попадание — 100 очков. Промах отнимает патрон.</p></div></article>
+      <article><span class="info-number">02</span><div><h2>Что проверяем</h2><p>Это рабочая модель будущего ввода: координаты мыши уже отделены от логики игры. Позже мышь можно заменить телефоном или датчиком.</p></div></article>
+    </section>
+    <footer>Локальный прототип · мышь или Android-пульт в одной Wi‑Fi сети · данные наружу не отправляются</footer>
+  </main>
+  <div class="phone-modal" id="phoneModal"><div class="phone-card"><button class="modal-close" id="closePhone">×</button><p class="eyebrow">ANDROID • WI‑FI</p><h2>Подключить телефон</h2><p id="phoneState">Получаем адрес…</p><img id="phoneQr" alt="QR-код для подключения телефона"><code id="phoneUrl">—</code><small>Телефон и компьютер должны быть в одной Wi‑Fi сети. Если QR не загрузился, откройте адрес текстом.</small></div></div>
+  <script src="input.js"></script>
+  <script src="game.js"></script>
+  <script src="phone-bridge.js"></script>
+</body>
+</html>

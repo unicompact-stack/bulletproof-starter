@@ -1,0 +1,5 @@
+{
+  "name": "duck-hunt-local-phone",
+  "private": true,
+  "scripts": { "start": "node server.js" }
+}
