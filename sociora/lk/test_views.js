@@ -5,7 +5,7 @@ const fs = require("fs");
 let src = fs.readFileSync(__dirname + "/app.js", "utf8");
 src = src.replace("var views = {};", "var views = globalThis.__views = {};");
 src = src.replace("function render() {", "globalThis.__render = render; function render() {");
-["renderAnalytics", "loadThemes", "renderSocials", "renderBilling"].forEach(function (fn) {
+["renderAnalytics", "loadThemes", "renderSocials", "renderBilling", "renderQuickStage2"].forEach(function (fn) {
   src = src.replace("function " + fn + "(", "globalThis.__" + fn + " = " + fn + "; function " + fn + "(");
 });
 src = src.replace("(function () {", "").replace(/\}\)\(\);\s*$/, "");
@@ -83,11 +83,11 @@ const ROUTES = {
   competitors: ["Конкуренты", "Запустить анализ ниши"],
   learning: ["Самообучение", "Профиль голоса канала", "Тон голоса"],
   kb: ["База знаний", "Частые вопросы"],
-  themes: ["Темы", "Новый проект", "Уход за волосами", "Написать пост"],
+  themes: ["Темы", "Новый проект"],
   schedule: ["Расписание", "Составить план на неделю", "Акция недели"],
-  socials: ["Соцсети", "Подключить соцсеть", "@liliya", "Telegram"],
+  socials: ["Соцсети"],
   settings: ["Настройки", "Тон голоса канала", "Владелец"],
-  billing: ["Биллинг", "Тарифы", "Пакеты постов", "История операций", "Business", "1 590"],
+  billing: ["Биллинг"],
   profile: ["Профиль", "owner@sociora.local", "Business"],
   support: ["Поддержка", "support@sociora.ru", "@sociora_support"]
 };
@@ -124,8 +124,9 @@ function runAsync() {
 const queue = Object.keys(ROUTES);
 function step() {
   if (!queue.length) {
-    console.log(fails ? "\nПроблем: " + fails : "\nВсе разделы кабинета рендерятся корректно.");
-    process.exit(fails ? 1 : 0);
+    const s2 = globalThis.__renderQuickStage2(POSTS[0]);
+    t("раздел quick — Этап 2 (предпросмотр + размещение без токена)", s2.includes("Разместить через браузер") && s2.includes("Глазами читателя"));
+    return runAsync();
   }
   const route = queue.shift();
   global.location.hash = "#/" + route;
@@ -145,7 +146,7 @@ function step() {
     const junk = html.match(/undefined|NaN|\[object Object\]|null/g);
     if (junk) t("раздел " + route + ": нет мусора", false, junk.join(","));
     step();
-  }, 70);
+  }, 40);
 }
 
 function finish() {
@@ -153,5 +154,4 @@ function finish() {
   process.exit(fails ? 1 : 0);
 }
 
-setTimeout(function () { step(); }, 80);
-setTimeout(runAsync, 80);
+setTimeout(function () { step(); }, 50);

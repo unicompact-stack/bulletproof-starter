@@ -235,10 +235,18 @@ def test_api():
     check("API: seeded-проекты доступны", bool(seed_project))
     status, d = call("POST", "/api/socials",
                      {"network": "telegram", "project_id": seed_project,
-                      "token": "123:ABC", "channel": "@verify_test"})
+                      "channel": "@verify_test"})
     social_id = d.get("social", {}).get("id")
-    check("API: подключение соцсети", d.get("ok") and bool(social_id),
+    check("API: подключение соцсети без токена (через браузер)", d.get("ok") and bool(social_id),
           d.get("error", ""))
+
+    status, d = call("GET", "/api/browser/status")
+    check("API: статус браузерных сессий без токенов",
+          d.get("ok") and "telegram" in d.get("browser", {}).get("sessions", {}))
+
+    status, d = call("POST", "/api/browser/login", {"network": "vk", "channel": "vk.com/club1"})
+    check("API: сохранение браузерного входа ВК без токена",
+          d.get("ok") and d.get("session", {}).get("logged_in") is True)
 
     # проект
     status, d = call("POST", "/api/projects", {"name": "Проверка", "niche": "фитнес"})
@@ -248,18 +256,18 @@ def test_api():
     status, d = call("POST", "/api/projects/%d/analyze" % pid)
     check("API: анализ ниши генерирует темы", d.get("ok") and len(d.get("themes", [])) > 0)
 
-    # посты
-    status, d = call("POST", "/api/posts/generate", {"project_id": pid})
+    # посты (Этап 1: создание текста -> Этап 2: размещение через браузер без токена)
+    status, d = call("POST", "/api/posts/generate", {"project_id": pid, "mode": "source", "source_text": "Новость дня: тренировки утром повышают бодрость"})
     post_id = d.get("post", {}).get("id")
     balance = d.get("user", {}).get("posts_balance")
-    check("API: генерация поста списывает баланс", d.get("ok") and bool(post_id) and balance >= 0)
+    check("API: Этап 1 — генерация поста списывает баланс", d.get("ok") and bool(post_id) and balance >= 0)
 
     status, d = call("POST", "/api/posts/%d/status" % post_id, {"action": "approve"})
     check("API: отправка поста на проверку", d["post"]["status"] == "approved")
 
-    status, d = call("POST", "/api/posts/%d/status" % post_id, {"action": "publish"})
-    check("API: публикация поста считает статистику",
-          d["post"]["status"] == "published" and d["post"]["views"] > 0)
+    status, d = call("POST", "/api/posts/%d/publish-browser" % post_id, {"networks": ["telegram", "vk"]})
+    check("API: Этап 2 — размещение поста через браузер без токена",
+          d.get("ok") and d["post"]["status"] == "published" and len(d.get("deliveries", [])) == 2)
 
     status, d = call("POST", "/api/posts/%d/regenerate" % post_id, {"comment": "сделай короче"})
     check("API: перегенерация поста", d.get("ok") and "Учтена правка" in d["post"]["body"])

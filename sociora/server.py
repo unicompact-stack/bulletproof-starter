@@ -25,6 +25,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
+import browser_poster
+
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 DB_PATH = DATA_DIR / "app.db"
@@ -658,6 +660,8 @@ def api_post_generate(handler, body, user):
     project_id = int(body.get("project_id") or 0)
     theme_id = body.get("theme_id")
     rubric = (body.get("rubric") or "").strip() or None
+    mode = (body.get("mode") or "scratch").strip().lower()
+    source_text = (body.get("source_text") or "").strip()
     conn = db()
     p = conn.execute("SELECT * FROM projects WHERE id=? AND user_id=?", (project_id, user["id"])).fetchone()
     if not p:
@@ -670,6 +674,34 @@ def api_post_generate(handler, body, user):
             conn.execute("UPDATE themes SET used=1 WHERE id=?", (theme_id,))
     spend_post(conn, user["id"])
     gen = generate_post(p["niche"], rubric=rubric, tone=p["tone"])
+    if mode == "rewrite" and source_text:
+        first_line = source_text.splitlines()[0][:70].strip()
+        gen["title"] = first_line or gen["title"]
+        gen["rubric"] = rubric or "Рерайт"
+        gen["body"] = (
+            "Переписали своими словами в тоне «%s»:\n\n%s\n\n"
+            "Короткий вывод для подписчиков:\n"
+            "• Сохраняйте главное и убирайте лишнюю воду.\n"
+            "• Применяйте на практике уже сегодня.\n\n"
+            "Напишите в комментариях, как у вас это устроено 👇"
+            % (p["tone"], source_text[:900])
+        )
+    elif mode == "source" and source_text:
+        first_line = source_text.splitlines()[0][:70].strip()
+        gen["title"] = "Главное из источника: " + (first_line or p["name"])
+        gen["rubric"] = rubric or "По источнику"
+        gen["body"] = (
+            "Разобрали материал и собрали выжимку для канала «%s»:\n\n"
+            "О чём речь:\n%s\n\n"
+            "Что это значит на практике:\n"
+            "— Сначала проверьте базовые шаги и задачу клиента.\n"
+            "— Сложные инструменты не нужны, если наведён порядок в основе.\n\n"
+            "Сохраните пост, чтобы вернуться к чек-листу."
+            % (p["name"], source_text[:800])
+        )
+    elif source_text:
+        gen["title"] = source_text[:80]
+        gen["body"] = "Тема: %s\n\n%s" % (source_text[:120], gen["body"])
     cur = conn.execute(
         "INSERT INTO posts (user_id, project_id, title, body, image_prompt, rubric, status, created_at) "
         "VALUES (?,?,?,?,?,?,'draft',?)",
@@ -770,20 +802,21 @@ def api_socials_list(handler, body, user):
         "WHERE s.user_id=? ORDER BY s.id DESC", (user["id"],)).fetchall()]
     projects = [dict(r) for r in conn.execute("SELECT id, name FROM projects WHERE user_id=?", (user["id"],)).fetchall()]
     conn.close()
-    return 200, {"ok": True, "socials": rows, "projects": projects}
+    for r in rows:
+        r["web_url"] = browser_poster.channel_to_web_url(r["network"], r["channel"])
+    return 200, {"ok": True, "socials": rows, "projects": projects, "browser": browser_poster.browser_status()}
 
 
 def api_social_connect(handler, body, user):
     network = (body.get("network") or "").strip().lower()
-    token = (body.get("token") or "").strip()
+    # токен больше не обязателен — по умолчанию работаем через браузерную сессию как человек
+    token = (body.get("token") or "").strip() or "browser-session"
     channel = (body.get("channel") or "").strip()
     project_id = int(body.get("project_id") or 0)
     if network not in NETWORKS:
         raise ApiError("Поддерживаются Telegram, ВКонтакте и MAX")
-    if not token:
-        raise ApiError("Укажите токен доступа")
     if not channel:
-        raise ApiError("Укажите канал/сообщество")
+        raise ApiError("Укажите ссылку или название канала/сообщества")
     conn = db()
     p = conn.execute("SELECT * FROM projects WHERE id=? AND user_id=?", (project_id, user["id"])).fetchone()
     if not p:
@@ -794,7 +827,7 @@ def api_social_connect(handler, body, user):
     if count >= limit:
         conn.close()
         raise ApiError("По вашему тарифу доступно соцсетей: %d." % limit, 402)
-    # мок-проверка подключения
+    browser_poster.login_in_browser(network, channel)
     channel_id = "ch_" + secrets.token_hex(4)
     cur = conn.execute(
         "INSERT INTO socials (user_id, project_id, network, token, channel, channel_id, created_at) "
@@ -804,7 +837,76 @@ def api_social_connect(handler, body, user):
     conn.commit()
     row = conn.execute("SELECT * FROM socials WHERE id=?", (cur.lastrowid,)).fetchone()
     conn.close()
-    return 200, {"ok": True, "social": dict(row), "message": "%s подключен: %s (проверка связи пройдена)" % (NETWORKS[network], channel)}
+    return 200, {"ok": True, "social": dict(row), "message": "%s подключен через браузер (без токена): %s" % (NETWORKS[network], channel)}
+
+
+def api_browser_status(handler, body, user):
+    st = browser_poster.browser_status()
+    conn = db()
+    socials = [dict(r) for r in conn.execute(
+        "SELECT s.*, p.name AS project_name FROM socials s JOIN projects p ON p.id=s.project_id "
+        "WHERE s.user_id=? ORDER BY s.id DESC", (user["id"],)).fetchall()]
+    conn.close()
+    for s in socials:
+        s["web_url"] = browser_poster.channel_to_web_url(s["network"], s["channel"])
+    return 200, {"ok": True, "browser": st, "socials": socials}
+
+
+def api_browser_login(handler, body, user):
+    network = (body.get("network") or "telegram").strip().lower()
+    channel = (body.get("channel") or "").strip()
+    if network not in NETWORKS:
+        raise ApiError("Поддерживаются Telegram, ВКонтакте и MAX")
+    res = browser_poster.login_in_browser(network, channel)
+    return 200, {"ok": True, "session": res, "message": res["message"]}
+
+
+def api_post_publish_browser(handler, body, user, post_id):
+    conn = db()
+    p = conn.execute("SELECT * FROM posts WHERE id=? AND user_id=?", (post_id, user["id"])).fetchone()
+    if not p:
+        conn.close()
+        raise ApiError("Пост не найден", 404)
+    new_title = (body.get("title") or p["title"]).strip()
+    new_body = body.get("body") if body.get("body") is not None else p["body"]
+    networks = body.get("networks") or ["telegram"]
+    if not isinstance(networks, list) or not networks:
+        networks = ["telegram"]
+
+    socials = [dict(r) for r in conn.execute(
+        "SELECT * FROM socials WHERE user_id=? AND project_id=?", (user["id"], p["project_id"])
+    ).fetchall()]
+    if not socials:
+        socials = [dict(r) for r in conn.execute(
+            "SELECT * FROM socials WHERE user_id=?", (user["id"],)
+        ).fetchall()]
+    by_net = {s["network"]: s["channel"] for s in socials}
+
+    deliveries = []
+    for net in networks:
+        net_key = str(net).lower()
+        if net_key not in NETWORKS:
+            continue
+        ch = by_net.get(net_key, "@" + net_key + "_channel")
+        deliveries.append(browser_poster.publish_via_browser(net_key, ch, new_title, new_body))
+
+    views = p["views"] if p["views"] > 0 else random.randint(140, 1400)
+    conn.execute(
+        "UPDATE posts SET title=?, body=?, status='published', published_at=?, networks=?, "
+        "views=?, likes=?, comments=?, reposts=? WHERE id=?",
+        (new_title, new_body, now_iso(), json.dumps(networks),
+         views, int(views * random.uniform(0.02, 0.06)),
+         int(views * random.uniform(0.004, 0.012)), int(views * random.uniform(0.002, 0.008)), post_id),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
+    conn.close()
+    return 200, {
+        "ok": True,
+        "post": post_dict(row),
+        "deliveries": deliveries,
+        "message": "Пост размещён через браузер (без токенов) на площадках: %d" % len(deliveries),
+    }
 
 
 def api_social_delete(handler, body, user, social_id):
@@ -1092,10 +1194,13 @@ API_ROUTES = [
     ("POST", r"^/api/posts/(\d+)$", api_post_update, True),
     ("POST", r"^/api/posts/(\d+)/regenerate$", api_post_regenerate, True),
     ("POST", r"^/api/posts/(\d+)/status$", api_post_status, True),
+    ("POST", r"^/api/posts/(\d+)/publish-browser$", api_post_publish_browser, True),
     ("DELETE", r"^/api/posts/(\d+)$", api_post_delete, True),
     ("GET", r"^/api/socials$", api_socials_list, True),
     ("POST", r"^/api/socials$", api_social_connect, True),
     ("DELETE", r"^/api/socials/(\d+)$", api_social_delete, True),
+    ("GET", r"^/api/browser/status$", api_browser_status, True),
+    ("POST", r"^/api/browser/login$", api_browser_login, True),
     ("GET", r"^/api/analytics$", api_analytics, True),
     ("GET", r"^/api/tariffs$", api_tariffs, True),
     ("POST", r"^/api/tariffs/choose$", api_tariff_choose, True),

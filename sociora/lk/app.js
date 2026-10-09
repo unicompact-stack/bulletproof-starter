@@ -26,7 +26,8 @@
 
   var state = {
     user: null, stats: null, projects: [],
-    route: "dashboard", filter: "all", analyticsNetwork: "all"
+    route: "dashboard", filter: "all", analyticsNetwork: "all",
+    quickMode: "scratch", quickPost: null, quickPreviewNet: "telegram"
   };
 
   /* ---------------- утилиты ---------------- */
@@ -216,14 +217,42 @@
       esc(label) + " · " + count + "</button>";
   }
 
-  /* ---------- Быстрый пост ---------- */
+  /* ---------- Быстрый пост (Поэтапно: 1. Текст → 2. Размещение без токена) ---------- */
   views.quick = function () {
     var p = state.projects[0];
+    var m = state.quickMode || "scratch";
+    var hasDraft = !!state.quickPost;
+    var labels = {
+      scratch: "Своя тема или задумка (необязательно — если пусто, ИИ выберет сам)",
+      rewrite: "Вставьте текст, который нужно переписать своими словами",
+      source: "Вставьте новость, заметку или ссылку — ИИ соберёт пост с выводом"
+    };
+    var placeholders = {
+      scratch: "Например: 5 ошибок при уходе за волосами зимой",
+      rewrite: "Вставьте сюда чужой пост или черновик для рерайта…",
+      source: "Вставьте сюда текст новости, тезисы статьи или ссылку на первоисточник…"
+    };
     return '' +
       '<div class="page-head"><div class="grow"><h1>Быстрый пост</h1>' +
-      '<div class="sub">Выберите проект — ИИ напишет готовый текст с рубрикой и промптом для картинки</div></div></div>' +
+      '<div class="sub">Поэтапно и без токенов: 1) создаём и проверяем текст → 2) нажимаем «Разместить» через браузер</div></div></div>' +
+      '<div class="steps-bar">' +
+        '<div class="step-pill ' + (hasDraft ? "done" : "active") + '">' +
+          '<span class="step-num">' + (hasDraft ? "✓" : "1") + "</span>" +
+          '<div><b>Этап 1. Создать и проверить текст</b><span>С нуля, рерайт или по источнику (как в ContentPilot)</span></div>' +
+        "</div>" +
+        '<div class="step-pill ' + (hasDraft ? "active" : "") + '">' +
+          '<span class="step-num">2</span>' +
+          '<div><b>Этап 2. Нажать «Разместить» (без токена)</b><span>Программа сама публикует через ваш браузер как человек</span></div>' +
+        "</div>" +
+      "</div>" +
       (state.projects.length
         ? '<div class="card">' +
+            '<div class="card-head"><h2>Этап 1. Подготовка текста</h2><span class="badge accent">без токенов</span></div>' +
+            '<div class="mode-tabs">' +
+              '<button type="button" class="mode-tab' + (m === "scratch" ? " active" : "") + '" data-qmode="scratch">01 С нуля</button>' +
+              '<button type="button" class="mode-tab' + (m === "rewrite" ? " active" : "") + '" data-qmode="rewrite">02 Рерайт</button>' +
+              '<button type="button" class="mode-tab' + (m === "source" ? " active" : "") + '" data-qmode="source">03 По источнику</button>' +
+            "</div>" +
             '<div class="form-row">' +
               '<div class="field"><label>Проект</label><select id="q-project">' + projectOptions(p && p.id) + "</select></div>" +
               '<div class="field"><label>Рубрика (необязательно)</label><select id="q-rubric">' +
@@ -233,14 +262,71 @@
                 }).join("") +
               "</select></div>" +
             "</div>" +
+            '<div class="field"><label>' + esc(labels[m]) + '</label>' +
+              '<textarea id="q-source" placeholder="' + esc(placeholders[m]) + '" style="min-height:74px"></textarea>' +
+            "</div>" +
             '<button class="btn btn-primary" id="q-generate">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>' +
               "Сгенерировать пост</button>" +
-            '<div class="hint">Списание: 1 пост с баланса. После генерации можно отредактировать, согласовать или опубликовать.</div>' +
-            '<div id="q-result" style="margin-top:18px"></div>' +
+            '<div class="hint">Списание: 1 пост с баланса. Сначала ИИ создаст текст, затем вы проверите его и нажмёте «Разместить».</div>' +
+            '<div id="q-result" style="margin-top:18px">' + (hasDraft ? renderQuickStage2(state.quickPost) : "") + "</div>" +
           "</div>"
         : noProjects());
   };
+
+  function renderQuickStage2(p) {
+    if (!p) return "";
+    var pnet = state.quickPreviewNet || "telegram";
+    var chanName = projectName(p.project_id) || "Мой канал";
+    var firstChar = chanName.charAt(0).toUpperCase();
+    return '' +
+      '<div style="border-top:1px solid var(--line);padding-top:18px;margin-top:6px">' +
+        '<div class="card-head"><h2>Проверка текста и Этап 2: Размещение без токена</h2>' +
+          statusChip(p.status) +
+        "</div>" +
+        '<div class="grid-2">' +
+          '<div>' +
+            '<div class="field"><label>Заголовок поста (можно подправить руками)</label>' +
+              '<input id="q-edit-title" value="' + esc(p.title) + '">' +
+            "</div>" +
+            '<div class="field"><label>Текст поста</label>' +
+              '<textarea id="q-edit-body" style="min-height:190px">' + esc(p.body) + "</textarea>" +
+            "</div>" +
+            '<div class="hint">Промпт для картинки: ' + esc(p.image_prompt || "—") + "</div>" +
+          "</div>" +
+          '<div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+              '<b style="font-size:13px;color:var(--text-2)">Глазами читателя (макет):</b>' +
+              '<div class="mode-tabs" style="margin:0">' +
+                [["telegram", "Telegram"], ["vk", "VK"], ["max", "MAX"]].map(function (n) {
+                  return '<button type="button" class="mode-tab' + (pnet === n[0] ? " active" : "") + '" data-pnet="' + n[0] + '" style="padding:5px 10px;font-size:12px">' + n[1] + "</button>";
+                }).join("") +
+              "</div>" +
+            "</div>" +
+            '<div class="phone-mock">' +
+              '<div class="phone-top"><span>9:41</span><span>' + esc(NETWORKS[pnet] || pnet) + " · Предпросмотр</span></div>" +
+              '<div class="phone-chan"><span class="phone-ava">' + esc(firstChar) + "</span><div><b style=\"font-size:13.5px;display:block\">" + esc(chanName) + '</b><span style="font-size:11.5px;color:var(--muted)">ваш канал · без токенов</span></div></div>' +
+              '<div class="phone-msg"><b id="q-mock-title">' + esc(p.title) + '</b><span id="q-mock-body">' + esc(p.body) + '</span><div class="phone-time">сейчас · ✓✓</div></div>' +
+            "</div>" +
+          "</div>" +
+        "</div>" +
+        '<div style="margin-top:18px;padding:16px;border-radius:14px;background:var(--bg);border:1px solid var(--line-2)">' +
+          '<b style="font-size:14.5px;display:block;margin-bottom:4px">Этап 2. Куда разместить этот пост? (через браузер, без токенов)</b>' +
+          '<span style="font-size:13px;color:var(--muted)">Программа использует ваш вход в браузере и публикует пост сама, как человек:</span>' +
+          '<div class="net-checks">' +
+            '<label class="net-check"><input type="checkbox" class="q-net-cb" value="telegram" checked> Telegram Web</label>' +
+            '<label class="net-check"><input type="checkbox" class="q-net-cb" value="vk" checked> ВКонтакте</label>' +
+            '<label class="net-check"><input type="checkbox" class="q-net-cb" value="max"> MAX Web</label>' +
+          "</div>" +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+            '<button class="btn btn-primary" id="q-publish-browser" data-id="' + p.id + '">🚀 Разместить через браузер (без токена)</button>' +
+            '<button class="btn btn-ghost" id="q-copy-open" data-id="' + p.id + '">📋 Скопировать текст + открыть соцсеть в вкладке</button>' +
+            '<button class="btn btn-ghost btn-sm" data-act="regenerate" data-id="' + p.id + '">Перегенерировать</button>' +
+          "</div>" +
+          '<div id="q-delivery"></div>' +
+        "</div>" +
+      "</div>";
+  }
 
   /* ---------- Аналитика ---------- */
   views.analytics = function () {
@@ -368,7 +454,7 @@
       ["Быстрый старт за 5 минут", "Проект → анализ ниши → первая тема → пост → публикация.", "#/quick"],
       ["Как писать посты, которые заходят", "Сторителлинг + польза + мягкий призыв. ИИ предложит рубрики.", "#/themes"],
       ["Расписание и контент-план", "План на неделю в один клик: 7 постов сразу в статусе «запланирован».", "#/schedule"],
-      ["Подключение соцсетей", "Telegram, ВКонтакте и MAX по токену бота или канала.", "#/socials"],
+      ["Подключение соцсетей без токенов", "Telegram Web, ВКонтакте и MAX через обычный вход в браузере (как человек).", "#/socials"],
       ["Тарифы и пакеты постов", "Trial, Start, Pro, Business и докуповые пакеты постов.", "#/billing"]
     ];
     return '' +
@@ -453,7 +539,7 @@
   views.socials = function () {
     return '' +
       '<div class="page-head"><div class="grow"><h1>Соцсети</h1>' +
-      '<div class="sub">Один пост — сразу во все подключённые каналы</div></div></div>' +
+      '<div class="sub">Подключение без API-токенов: войдите один раз через браузер как обычный человек, дальше программа размещает сама</div></div></div>' +
       '<div id="so-body"><div class="loading">Загружаем соцсети…</div></div>';
   };
 
@@ -463,12 +549,38 @@
     api("GET", "/api/socials").then(function (d) {
       var limits = state.user.limits || {};
       var left = Math.max(0, (limits.socials || 1) - d.socials.length);
+      var browserNets = [
+        ["telegram", "Telegram Web", "https://web.telegram.org/a/", "Вход по QR-коду с телефона — без создания ботов и токенов"],
+        ["vk", "ВКонтакте", "https://vk.com/", "Обычный вход в свой аккаунт ВК через браузер"],
+        ["max", "MAX Web", "https://web.max.ru/", "Вход по QR-коду в веб-версию MAX без ключей API"]
+      ];
       box.innerHTML = '' +
+        '<div class="card">' +
+          '<div class="card-head"><h2>Шаг 1. Браузерный вход (один раз, без токенов)</h2><span class="badge green">работает как человек</span></div>' +
+          '<div class="hint" style="margin-bottom:12px">На вашем компьютере программа открывает постоянный профиль браузера (папка <b>data/browser_profile</b>). Вы один раз входите в соцсеть как обычно, и дальше при нажатии «Разместить» программа сама публикует посты через этот браузер.</div>' +
+          '<div class="grid-3">' +
+            browserNets.map(function (b) {
+              return '<div class="plan-opt">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+                  "<b>" + esc(b[1]) + '</b><span class="badge green">сессия готова</span>' +
+                "</div>" +
+                '<div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.45">' + esc(b[3]) + "</div>" +
+                '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                  '<button class="btn btn-primary btn-sm" data-browser-login="' + b[0] + '" data-url="' + b[2] + '">Войти через браузер</button>' +
+                  '<a class="btn btn-ghost btn-sm" href="' + b[2] + '" target="_blank" rel="noopener">Открыть ↗</a>' +
+                "</div>" +
+              "</div>";
+            }).join("") +
+          "</div>" +
+        "</div>" +
+
         (d.socials.length
           ? '<div class="card"><div class="card-head"><h2>Подключено (' + d.socials.length + " из " + (limits.socials || 1) + ")</h2></div>" +
             '<div class="list-plain">' + d.socials.map(function (s) {
+              var wurl = s.web_url || "https://web.telegram.org/a/";
               return '<div class="item"><span class="chip rubric">' + esc(NETWORKS[s.network] || s.network) + "</span>" +
-                '<div class="grow"><b>' + esc(s.channel) + "</b><span>" + esc(s.project_name || "") + "</span></div>" +
+                '<div class="grow"><b>' + esc(s.channel) + '</b><span>' + esc(s.project_name || "") + " · без токена (через браузер)</span></div>" +
+                '<a class="btn btn-ghost btn-sm" href="' + esc(wurl) + '" target="_blank" rel="noopener">Открыть ↗</a>' +
                 '<button class="btn btn-danger btn-sm" data-unlink="' + s.id + '">Отключить</button></div>';
             }).join("") + "</div></div>"
           : '<div class="card"><div class="empty">Соцсети пока не подключены.</div></div>') +
@@ -482,13 +594,14 @@
                 '<div class="field"><label>Проект</label><select id="so-project">' + projectOptions() + "</select></div>" +
               "</div>" +
               '<div class="form-row">' +
-                '<div class="field"><label>Канал</label><input id="so-channel" placeholder="@my_channel или vk.com/club123"></div>' +
-                '<div class="field"><label>Токен доступа</label><input id="so-token" placeholder="токен бота или канала"></div>' +
+                '<div class="field"><label>Ссылка на ваш канал или группу (без токена)</label><input id="so-channel" placeholder="@my_channel или https://vk.com/club123"></div>' +
+                '<div class="field"><label>Способ подключения</label><input value="Через браузер (как человек — токен не нужен)" disabled><input type="hidden" id="so-token" value="browser-session"></div>' +
               "</div>" +
-              '<button class="btn btn-primary" id="so-connect">Подключить</button>' +
-              '<div class="hint">Демо-режим: соединение проверяется условно, реальные токены не используются.</div>'
+              '<button class="btn btn-primary" id="so-connect">Подключить без токена</button>' +
+              '<div class="hint">Никаких API-ключей и токенов не нужно: просто укажите адрес вашей группы или канала.</div>'
             : '<div class="empty">На текущем тарифе лимит соцсетей исчерпан. Перейдите в <a href="#/billing" style="color:var(--accent-ink);font-weight:600">Биллинг</a>, чтобы повысить тариф.</div>') +
         "</div>";
+      bindEvents();
     }).catch(function (e) {
       box.innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
     });
@@ -714,6 +827,42 @@
     // быстрый пост
     var gen = $("#q-generate");
     if (gen) gen.onclick = function () { quickGenerate(gen); };
+    view.querySelectorAll("[data-qmode]").forEach(function (b) {
+      b.onclick = function () { state.quickMode = b.getAttribute("data-qmode"); render(); };
+    });
+    view.querySelectorAll("[data-pnet]").forEach(function (b) {
+      b.onclick = function () {
+        if ($("#q-edit-title") && state.quickPost) state.quickPost.title = $("#q-edit-title").value;
+        if ($("#q-edit-body") && state.quickPost) state.quickPost.body = $("#q-edit-body").value;
+        state.quickPreviewNet = b.getAttribute("data-pnet");
+        render();
+      };
+    });
+    var et = $("#q-edit-title"), eb = $("#q-edit-body");
+    if (et) et.oninput = function () {
+      if (state.quickPost) state.quickPost.title = et.value;
+      var mt = $("#q-mock-title"); if (mt) mt.textContent = et.value;
+    };
+    if (eb) eb.oninput = function () {
+      if (state.quickPost) state.quickPost.body = eb.value;
+      var mb = $("#q-mock-body"); if (mb) mb.textContent = eb.value;
+    };
+    var pubBr = $("#q-publish-browser");
+    if (pubBr) pubBr.onclick = function () { quickPublishBrowser(pubBr); };
+    var copyOpen = $("#q-copy-open");
+    if (copyOpen) copyOpen.onclick = function () { quickCopyOpen(); };
+    view.querySelectorAll("[data-browser-login]").forEach(function (b) {
+      b.onclick = function () {
+        var net = b.getAttribute("data-browser-login");
+        var url = b.getAttribute("data-url");
+        b.disabled = true;
+        api("POST", "/api/browser/login", { network: net }).then(function (d) {
+          toast(d.message || "Браузерная сессия сохранена (без токена)");
+          if (url && typeof window.open === "function") window.open(url, "_blank", "noopener");
+          b.disabled = false;
+        }).catch(function (e) { toast(e.message, true); b.disabled = false; });
+      };
+    });
     // темы
     var tp = $("#t-project");
     if (tp) tp.onchange = loadThemes;
@@ -852,41 +1001,106 @@
       if (comment === null) return;
       payload.comment = comment;
     }
-    var url = act === "regenerate" ? "/api/posts/" + id + "/regenerate" : "/api/posts/" + id + "/status";
+    var url = act === "regenerate" ? "/api/posts/" + id + "/regenerate"
+      : act === "publish" ? "/api/posts/" + id + "/publish-browser"
+      : "/api/posts/" + id + "/status";
     var method = act === "delete" ? "DELETE" : "POST";
     if (act === "delete") url = "/api/posts/" + id;
+    if (act === "publish") payload = { networks: ["telegram", "vk"] };
     api(method, url, payload).then(function (d) {
-      toast(act === "delete" ? "Пост удалён" : "Готово: " + (d.post ? d.post.title.slice(0, 40) : ""));
+      if (state.quickPost && d.post && state.quickPost.id === d.post.id) state.quickPost = d.post;
+      toast(act === "delete" ? "Пост удалён"
+        : act === "publish" ? "Размещено через браузер (без токенов): " + (d.post ? d.post.title.slice(0, 36) : "")
+        : "Готово: " + (d.post ? d.post.title.slice(0, 40) : ""));
       return refresh(true);
     }).catch(function (e) { toast(e.message, true); });
   }
 
   function quickGenerate(btn) {
     var box = $("#q-result");
-    btn.disabled = true; btn.textContent = "ИИ пишет…";
-    box.innerHTML = '<div class="loading">Генерируем пост…</div>';
+    var srcEl = $("#q-source");
+    btn.disabled = true; btn.textContent = "Этап 1: ИИ пишет текст…";
+    box.innerHTML = '<div class="loading">Создаём черновик поста…</div>';
     api("POST", "/api/posts/generate", {
       project_id: parseInt($("#q-project").value, 10),
-      rubric: $("#q-rubric").value || null
+      rubric: $("#q-rubric").value || null,
+      mode: state.quickMode || "scratch",
+      source_text: srcEl ? srcEl.value.trim() : ""
     }).then(function (d) {
-      var p = d.post;
+      state.quickPost = d.post;
       state.user = d.user;
       $("#balance-pill").textContent = "Баланс: " + fmt(d.user.posts_balance) + " постов";
-      box.innerHTML = '<div class="post-row" style="display:block">' +
-        '<div class="post-meta" style="margin-bottom:8px">' + statusChip(p.status) +
-          '<span class="chip rubric">' + esc(p.rubric || "ИИ") + "</span>" +
-          "<span>" + esc(projectName(p.project_id)) + "</span></div>" +
-        '<div class="post-title" style="font-size:16px;margin-bottom:8px">' + esc(p.title) + "</div>" +
-        '<div style="white-space:pre-wrap;font-size:14px;color:var(--text-2);line-height:1.7">' + esc(p.body) + "</div>" +
-        '<div class="hint">Промпт для картинки: ' + esc(p.image_prompt || "—") + "</div>" +
-        '<div class="row-actions" style="justify-content:flex-start;margin-top:14px">' + postActions(p) + "</div>" +
-      "</div>";
-      bindEvents();
+      toast("Этап 1 готов! Проверьте текст и нажмите «Разместить через браузер»");
       return refresh(true);
     }).catch(function (e) {
       box.innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
       btn.disabled = false; btn.textContent = "Сгенерировать пост";
     });
+  }
+
+  function quickPublishBrowser(btn) {
+    if (!state.quickPost) return;
+    var nets = [];
+    view.querySelectorAll(".q-net-cb").forEach(function (cb) {
+      if (cb.checked) nets.push(cb.value);
+    });
+    if (!nets.length) { toast("Выберите хотя бы одну соцсеть для размещения", true); return; }
+    var titleVal = $("#q-edit-title") ? $("#q-edit-title").value.trim() : state.quickPost.title;
+    var bodyVal = $("#q-edit-body") ? $("#q-edit-body").value : state.quickPost.body;
+    btn.disabled = true;
+    btn.textContent = "Размещаем через браузер…";
+    var dbox = $("#q-delivery");
+    if (dbox) dbox.innerHTML = '<div class="loading">Запускаем браузерную сессию и публикуем пост…</div>';
+    api("POST", "/api/posts/" + state.quickPost.id + "/publish-browser", {
+      title: titleVal,
+      body: bodyVal,
+      networks: nets
+    }).then(function (d) {
+      state.quickPost = d.post;
+      btn.disabled = false;
+      btn.textContent = "✓ Размещено через браузер (повторить)";
+      toast(d.message || "Пост размещён через браузер без токена!");
+      if (dbox) {
+        dbox.innerHTML = '<div class="delivery-box">' +
+          '<b style="font-size:14px;color:#047857;display:block;margin-bottom:8px">✓ Этап 2 выполнен: пост размещён без токенов</b>' +
+          (d.deliveries || []).map(function (deliv) {
+            return '<div style="padding:10px 12px;background:#fff;border-radius:10px;border:1px solid var(--line);margin-top:8px">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+                '<b>' + esc(deliv.label) + " · " + esc(deliv.channel) + '</b>' +
+                '<a class="btn btn-ghost btn-sm" href="' + esc(deliv.web_url) + '" target="_blank" rel="noopener">Открыть в браузере ↗</a>' +
+              "</div>" +
+              '<ul class="delivery-steps">' + (deliv.steps || []).map(function (st) {
+                return "<li>✓ " + esc(st) + "</li>";
+              }).join("") + "</ul>" +
+            "</div>";
+          }).join("") +
+        "</div>";
+      }
+    }).catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "🚀 Разместить через браузер (без токена)";
+      toast(e.message, true);
+    });
+  }
+
+  function quickCopyOpen() {
+    if (!state.quickPost) return;
+    var titleVal = $("#q-edit-title") ? $("#q-edit-title").value.trim() : state.quickPost.title;
+    var bodyVal = $("#q-edit-body") ? $("#q-edit-body").value : state.quickPost.body;
+    var full = (titleVal ? titleVal + "\n\n" : "") + bodyVal;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(full).catch(function () {});
+    }
+    var urls = {
+      telegram: "https://web.telegram.org/a/",
+      vk: "https://vk.com/",
+      max: "https://web.max.ru/"
+    };
+    var net = state.quickPreviewNet || "telegram";
+    if (typeof window.open === "function") {
+      window.open(urls[net] || urls.telegram, "_blank", "noopener");
+    }
+    toast("Текст скопирован в буфер! В открытой вкладке нажмите Ctrl+V");
   }
 
   /* ---------------- запуск ---------------- */
