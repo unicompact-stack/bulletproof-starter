@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DJ-пульт — PULTEVENT</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dj.css">
+</head>
+<body>
+  <div class="desk">
+    <header class="top">
+      <div class="logo"><div class="mark">DJ</div><div><b>PULTEVENT</b><small>DJ-ПУЛЬТ</small></div></div>
+      <div class="group">
+        <button class="btn" id="tourBtn" type="button">Обучение</button>
+        <button class="btn" id="guideBtn" type="button">Гид</button>
+        <button class="btn" id="screenBtn" type="button">Экран</button>
+        <button class="btn" id="helpBtn" type="button">?</button>
+        <button class="btn" id="backBtn" type="button">← В приложение</button>
+        <button class="btn" id="viewBtn" type="button">Вид</button>
+      </div>
+      <div class="group right">
+        <button class="btn solid" id="soundBtn" type="button">Включить звук</button>
+        <button class="btn" id="outputsBtn" type="button" data-tour="outputs">Выходы</button>
+        <button class="btn" id="automixBtn" type="button" data-tour="automix">Автомикс</button>
+        <button class="btn" id="orderBtn" type="button" data-tour="order">Играть подряд</button>
+        <button class="btn" id="midiBtn" type="button">Контроллер</button>
+        <button class="btn" id="learnBtn" type="button">Привязка</button>
+        <button class="btn on" id="autogainBtn" type="button">Автогромкость</button>
+        <button class="btn" id="recBtn" type="button">Запись</button>
+        <select class="sel" id="setlist" aria-label="Сетлист"></select>
+        <button class="btn solid" id="addTracks" type="button">+ Треки</button>
+      </div>
+    </header>
+
+    <div class="decks" data-tour="decks">
+      <section class="deck head-a" data-deck-root="A">
+        <div class="deck-h"><strong>ДЕКА A</strong><span class="title">Нет трека</span><span class="time">0:00 / 0:00</span></div>
+        <div class="wave-wrap"><canvas class="wave"></canvas><div class="hint">Перетащите аудиофайл сюда</div></div>
+        <div class="transport">
+          <button class="play" data-play="A" type="button">▶</button>
+          <button data-cue="A" type="button">Метка</button>
+          <button data-sync="A" type="button">Свести</button>
+          <button data-tap="A" type="button">Отбить</button>
+          <span class="bpm" data-bpm="A">— BPM</span>
+          <input class="rate" data-rate="A" type="range" min="0.84" max="1.16" step="0.001" value="1" aria-label="Темп A">
+          <button data-range="A" type="button">±16</button>
+          <button data-bend="A" data-dir="-1" type="button">−</button>
+          <button data-bend="A" data-dir="1" type="button">+</button>
+        </div>
+        <div class="cues">
+          <button data-hot="A" data-slot="0" type="button">1</button>
+          <button data-hot="A" data-slot="1" type="button">2</button>
+          <button data-hot="A" data-slot="2" type="button">3</button>
+          <button data-hot="A" data-slot="3" type="button">4</button>
+          <button data-hot="A" data-slot="4" type="button">5</button>
+          <button data-hot="A" data-slot="5" type="button">6</button>
+          <button data-hot="A" data-slot="6" type="button">7</button>
+          <button data-hot="A" data-slot="7" type="button">8</button>
+          <button data-jump="A" data-beats="-1" type="button">−1</button>
+          <button data-jump="A" data-beats="1" type="button">+1</button>
+        </div>
+        <div class="loops">
+          <button data-loop="A" data-beats="1" type="button">1</button>
+          <button data-loop="A" data-beats="2" type="button">2</button>
+          <button data-loop="A" data-beats="4" type="button">4</button>
+          <button data-loop="A" data-beats="8" type="button">8</button>
+          <button data-loop-off="A" type="button">Снять петлю</button>
+          <button data-load="A" type="button">Загрузить трек</button>
+        </div>
+      </section>
+      <section class="deck head-b" data-deck-root="B">
+        <div class="deck-h"><strong>ДЕКА B</strong><span class="title">Нет трека</span><span class="time">0:00 / 0:00</span></div>
+        <div class="wave-wrap"><canvas class="wave"></canvas><div class="hint">Перетащите аудиофайл сюда</div></div>
+        <div class="transport">
+          <button class="play" data-play="B" type="button">▶</button>
+          <button data-cue="B" type="button">Метка</button>
+          <button data-sync="B" type="button">Свести</button>
+          <button data-tap="B" type="button">Отбить</button>
+          <span class="bpm" data-bpm="B">— BPM</span>
+          <input class="rate" data-rate="B" type="range" min="0.84" max="1.16" step="0.001" value="1" aria-label="Темп B">
+          <button data-range="B" type="button">±16</button>
+          <button data-bend="B" data-dir="-1" type="button">−</button>
+          <button data-bend="B" data-dir="1" type="button">+</button>
+        </div>
+        <div class="cues">
+          <button data-hot="B" data-slot="0" type="button">1</button>
+          <button data-hot="B" data-slot="1" type="button">2</button>
+          <button data-hot="B" data-slot="2" type="button">3</button>
+          <button data-hot="B" data-slot="3" type="button">4</button>
+          <button data-hot="B" data-slot="4" type="button">5</button>
+          <button data-hot="B" data-slot="5" type="button">6</button>
+          <button data-hot="B" data-slot="6" type="button">7</button>
+          <button data-hot="B" data-slot="7" type="button">8</button>
+          <button data-jump="B" data-beats="-1" type="button">−1</button>
+          <button data-jump="B" data-beats="1" type="button">+1</button>
+        </div>
+        <div class="loops">
+          <button data-loop="B" data-beats="1" type="button">1</button>
+          <button data-loop="B" data-beats="2" type="button">2</button>
+          <button data-loop="B" data-beats="4" type="button">4</button>
+          <button data-loop="B" data-beats="8" type="button">8</button>
+          <button data-loop-off="B" type="button">Снять петлю</button>
+          <button data-load="B" type="button">Загрузить трек</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="mixer" data-tour="mixer">
+      <section class="chan" data-learn="faderA">
+        <div>
+          <div class="meter" data-meter="A"><i></i></div>
+          <input class="fader" data-fader="A" data-learn="faderA" type="range" min="0" max="1" step="0.001" value="0.8" aria-label="Громкость A">
+        </div>
+        <div>
+          <div class="knobs">
+            <div class="knob" data-knob="high" data-deck="A" data-learn="highA"><b></b><span>ВЫСОКИЕ</span><small>HIGH</small></div>
+            <div class="knob" data-knob="mid" data-deck="A" data-learn="midA"><b></b><span>СРЕДНИЕ</span><small>MID</small></div>
+            <div class="knob" data-knob="low" data-deck="A" data-learn="lowA"><b></b><span>НИЗКИЕ</span><small>LOW</small></div>
+            <div class="knob" data-knob="filter" data-deck="A" data-learn="filterA"><b></b><span>ФИЛЬТР</span><small>FILTER</small></div>
+          </div>
+          <div class="kills">
+            <span class="lbl">ВЫРУБИТЬ</span>
+            <button data-kill="high" data-deck="A" type="button">ВЧ</button>
+            <button data-kill="mid" data-deck="A" type="button">СЧ</button>
+            <button data-kill="low" data-deck="A" type="button">НЧ</button>
+          </div>
+          <div class="sends">
+            <button data-send="echo" data-deck="A" type="button">Эхо</button>
+            <button data-send="hall" data-deck="A" type="button">Зал</button>
+            <button data-cue-btn="A" type="button">В наушники</button>
+          </div>
+        </div>
+      </section>
+      <section class="master">
+        <h3>МАСТЕР</h3>
+        <div class="lim" id="limiter">ЛИМИТЕР · ЗАПАС ЕСТЬ</div>
+        <div class="sliders">
+          <label>Громкость в зале <input id="hallVol" data-learn="hall" type="range" min="0" max="1" step="0.001" value="0.85"></label>
+          <label>Громкость наушников <input id="cueVol" data-learn="cueVol" type="range" min="0" max="1" step="0.001" value="0.8"></label>
+          <label>Наушники — зал <input id="blend" data-learn="blend" type="range" min="0" max="1" step="0.001" value="0"></label>
+        </div>
+        <label class="lbl"><input id="monitor" type="checkbox"> Свой монитор</label>
+        <div class="lbl">ПЕРЕХОД A ↔ B</div>
+        <input class="cross" id="cross" data-learn="xf" type="range" min="0" max="1" step="0.001" value="0.5" aria-label="Кроссфейдер">
+        <div class="match" id="match" title="Совпадение долей"><i></i><b></b></div>
+        <label class="lbl"><input id="quantize" type="checkbox" checked> По сетке</label>
+      </section>
+      <section class="chan">
+        <div>
+          <div class="meter" data-meter="B"><i></i></div>
+          <input class="fader" data-fader="B" data-learn="faderB" type="range" min="0" max="1" step="0.001" value="0.8" aria-label="Громкость B">
+        </div>
+        <div>
+          <div class="knobs">
+            <div class="knob" data-knob="high" data-deck="B" data-learn="highB"><b></b><span>ВЫСОКИЕ</span><small>HIGH</small></div>
+            <div class="knob" data-knob="mid" data-deck="B" data-learn="midB"><b></b><span>СРЕДНИЕ</span><small>MID</small></div>
+            <div class="knob" data-knob="low" data-deck="B" data-learn="lowB"><b></b><span>НИЗКИЕ</span><small>LOW</small></div>
+            <div class="knob" data-knob="filter" data-deck="B" data-learn="filterB"><b></b><span>ФИЛЬТР</span><small>FILTER</small></div>
+          </div>
+          <div class="kills">
+            <span class="lbl">ВЫРУБИТЬ</span>
+            <button data-kill="high" data-deck="B" type="button">ВЧ</button>
+            <button data-kill="mid" data-deck="B" type="button">СЧ</button>
+            <button data-kill="low" data-deck="B" type="button">НЧ</button>
+          </div>
+          <div class="sends">
+            <button data-send="echo" data-deck="B" type="button">Эхо</button>
+            <button data-send="hall" data-deck="B" type="button">Зал</button>
+            <button data-cue-btn="B" type="button">В наушники</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="fx" data-tour="fx">
+      <div class="tabs">
+        <button class="btn on" data-fx-tab="master" type="button">На весь звук</button>
+        <button class="btn" data-fx-tab="picture" type="button">Картина</button>
+        <button class="btn" data-fx-tab="hits" type="button">Отбивки</button>
+      </div>
+      <div id="fxPad"></div>
+      <button class="btn" id="fxClear" type="button">Снять всё</button>
+    </div>
+
+    <section class="lib" data-tour="lib">
+      <div class="lib-h">
+        <button class="btn on" data-lib-tab="library" type="button">Библиотека</button>
+        <button class="btn" data-lib-tab="orders" type="button">Заказы</button>
+        <button class="btn" data-lib-tab="history" type="button">История</button>
+        <input id="libSearch" placeholder="Поиск по названию" aria-label="Поиск">
+        <button class="btn" id="loadA" type="button">На деку A</button>
+        <button class="btn" id="loadB" type="button">На деку B</button>
+        <button class="btn" id="saveSet" type="button">Сохранить как…</button>
+        <button class="btn" id="deleteTrack" type="button">Удалить</button>
+        <button class="btn" id="testBeats" type="button">Тест-биты</button>
+      </div>
+      <div id="libExtra"></div>
+      <div class="list" id="libList"></div>
+    </section>
+  </div>
+  <div class="popover" id="popover" hidden></div>
+  <div class="tour" id="tour" hidden></div>
+  <div class="toast" id="toast" hidden></div>
+  <input id="fileAny" type="file" accept="audio/*" multiple hidden>
+  <input id="fileA" type="file" accept="audio/*" hidden>
+  <input id="fileB" type="file" accept="audio/*" hidden>
+  <script src="/js/dj.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Картина — PULTEVENT DJ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Unbounded:wght@700&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; background: #07060f; color: #fff; font-family: Manrope, sans-serif; }
+    body { display: grid; place-items: center; overflow: hidden; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+    .card { position: relative; z-index: 1; text-align: center; }
+    small { letter-spacing: .2em; color: #ff8ab8; font-weight: 800; }
+    h1 { font-family: Unbounded, sans-serif; font-size: clamp(32px, 6vw, 84px); margin: 8px 0; }
+    p { color: #d9c6e4; font-size: 22px; }
+  </style>
+</head>
+<body>
+  <canvas id="viz"></canvas>
+  <div class="card">
+    <small>PULTEVENT · DJ</small>
+    <h1 id="title">Ожидание</h1>
+    <p id="sub">Картина зала</p>
+  </div>
+  <script>
+    const title = document.getElementById('title');
+    const sub = document.getElementById('sub');
+    const canvas = document.getElementById('viz');
+    const ctx = canvas.getContext('2d');
+    let level = 0.2;
+    const bus = new BroadcastChannel('pultevent-dj');
+    bus.onmessage = (event) => {
+      const data = event.data || {};
+      if (data.type !== 'state') return;
+      const loud = data.cross < 0.5 ? data.a : data.b;
+      title.textContent = (loud && loud.title) || 'Пауза';
+      sub.textContent = [data.a && data.a.title, data.b && data.b.title].filter(Boolean).join('  ·  ') || 'Деки пустые';
+      level = data.level || 0;
+    };
+    bus.postMessage({ type: 'hello' });
+    function draw() {
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const bars = 48;
+      const gap = 8;
+      const w = (canvas.width - gap * bars) / bars;
+      for (let i = 0; i < bars; i++) {
+        const h = (0.15 + Math.abs(Math.sin(Date.now() / 280 + i)) * level) * canvas.height * 0.42;
+        ctx.fillStyle = i % 2 ? '#ff2f86' : '#3ad7ff';
+        ctx.fillRect(i * (w + gap), canvas.height - h - 40, w, h);
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>
