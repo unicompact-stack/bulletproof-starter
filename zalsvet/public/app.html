@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Пульт ведущего — ЗалСвет</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/console.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon-btn side-toggle" id="sideToggle" type="button" aria-label="Разделы">☰</button>
+      <a class="brand" href="/">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect width="64" height="64" rx="16" fill="#e07a3d"/>
+          <circle cx="32" cy="32" r="10" fill="none" stroke="#1a120c" stroke-width="3"/>
+          <circle cx="32" cy="32" r="3" fill="#1a120c"/>
+        </svg>
+        <span><b>ЗалСвет</b><small>ПУЛЬТ ВЕДУЩЕГО</small></span>
+      </a>
+      <nav class="top-nav" id="topNav"></nav>
+      <div class="top-actions" id="topActions"></div>
+    </header>
+    <aside class="side" id="side">
+      <button class="holidays-card" id="openHolidays" type="button"><i>＋</i><span>МОИ ПРАЗДНИКИ<br>карточки, календарь, CRM</span></button>
+      <div class="clock-block">
+        <strong id="clock">--:--</strong>
+        <div><span class="dot">●</span> <span id="dateLine"></span></div>
+        <div id="showLine" class="show-line">Свадьба Анны и Марка</div>
+      </div>
+      <div class="search-row">
+        <input id="search" placeholder="Поиск раздела" aria-label="Поиск раздела">
+        <button class="gear" id="openSets" type="button" aria-label="Наборы">⚙</button>
+      </div>
+      <div class="sec-head">РАЗДЕЛЫ <button class="linkish" id="addSet" type="button">+ набор</button></div>
+      <div class="sections" id="sections"></div>
+      <div class="demo-pill" id="demoPill">Демо-доступ</div>
+    </aside>
+    <main class="stage-col">
+      <div class="stage-wrap">
+        <div class="zoom">
+          <button type="button" id="zoomOut" aria-label="Уменьшить">−</button>
+          <span id="zoomLabel">100%</span>
+          <button type="button" id="zoomIn" aria-label="Увеличить">+</button>
+        </div>
+        <div class="stage-frame" id="stageFrame"><iframe id="screen" title="Экран для гостей"></iframe></div>
+        <div class="dock" id="dock"></div>
+        <button class="save-btn" id="saveScene" type="button">Сохранить</button>
+      </div>
+    </main>
+  </div>
+  <div class="popover" id="popover" hidden></div>
+  <div class="modal-back" id="modalBack" hidden><div class="modal" id="modal"></div></div>
+  <div class="tour" id="tour" hidden></div>
+  <div class="toast" id="toast" hidden></div>
+  <script src="/js/console.js"></script>
+</body>
+</html>

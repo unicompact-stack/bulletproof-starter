@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Вход — ЗалСвет</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,560;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/site.css">
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <a class="logo" href="/"><span class="logo-mark"><span></span><i></i></span><span><b>ЗалСвет</b></span></a>
+    <p class="eyebrow" style="margin-top:18px">Личный кабинет ведущего</p>
+    <h1 style="font-size:32px">Вход в платформу</h1>
+    <div class="demo-box">
+      Демо уже готово: <b>demo@zalsvet.local</b> / <b>demo1234</b>
+      <div style="margin-top:8px"><button class="btn btn-ink" id="demoBtn" type="button">Войти в демо-кабинет</button></div>
+    </div>
+    <div class="tabs">
+      <button type="button" id="tabLogin" class="active">Вход</button>
+      <button type="button" id="tabReg">Регистрация</button>
+    </div>
+    <form id="form">
+      <div id="regFields" class="hidden">
+        <label for="name">Имя и фамилия</label>
+        <input id="name" name="name" autocomplete="name" placeholder="Алина Дворецкая">
+        <label for="phone">Телефон</label>
+        <input id="phone" name="phone" autocomplete="tel" placeholder="+7 900 000-00-00">
+        <label for="country">Страна</label>
+        <select id="country" name="country">
+          <option>Россия</option><option>Казахстан</option><option>Беларусь</option><option>Узбекистан</option><option>Киргизия</option><option>Армения</option><option>Азербайджан</option><option>Грузия</option><option>Молдова</option><option>Другая</option>
+        </select>
+      </div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required placeholder="you@mail.ru">
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="минимум 6 символов">
+      <div id="captcha" class="hidden">
+        <label for="sum">Докажите, что вы не робот. Сколько будет 2 + 2?</label>
+        <input id="sum" inputmode="numeric" placeholder="4">
+        <label class="check"><input type="checkbox" id="consent"> Я даю <a href="/legal/consent">согласие на обработку данных</a> и принимаю <a href="/legal/privacy">политику</a></label>
+        <label class="check"><input type="checkbox" id="offer"> Я принимаю <a href="/legal/offer">оферту</a> и <a href="/legal/terms">условия</a></label>
+      </div>
+      <p class="form-error" id="error"></p>
+      <button class="btn btn-coral" style="width:100%" type="submit" id="submit">Войти</button>
+    </form>
+    <p><button class="btn btn-ghost" id="forgot" type="button">Забыли пароль?</button></p>
+    <p><a href="/">← На главную</a></p>
+  </main>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
