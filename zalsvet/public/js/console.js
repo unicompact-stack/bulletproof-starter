@@ -30,7 +30,8 @@ const state = {
   collapsed: JSON.parse(localStorage.getItem('pe-collapsed') || '{}'),
   query: '',
   sound: localStorage.getItem('pe-sound') !== '0',
-  tour: 0
+  tour: 0,
+  catalogOpen: false
 };
 
 const $ = (id) => document.getElementById(id);
@@ -153,15 +154,13 @@ function renderTop() {
   const line = $('showLine');
   if (line && event) line.textContent = event.title;
   $('topNav').innerHTML = `
-    <button class="pill cabinet" data-open="cabinet" type="button">Личный кабинет</button>
-    <button class="pill dj" data-open="dj" type="button">DJ пульт</button>
-    <button class="pill" data-open="kp" type="button">КП</button>
-    <button class="pill" data-open="partner" type="button">Партнёрка</button>
+    <button class="pill" data-open="cabinet" type="button">Кабинет</button>
+    <button class="pill" data-open="dj" type="button">Музыка</button>
     <button class="type-btn" id="typeBtn" type="button">${esc(type)} ▾</button>`;
   $('topActions').innerHTML = `
-    <button class="act orange" id="secondScreen" type="button">Второй экран</button>
-    <button class="act teal" id="phoneBtn" type="button">Телефон</button>
-    <button class="act pink" id="fullBtn" type="button">На весь экран</button>
+    <button class="act" id="secondScreen" type="button">Второй экран</button>
+    <button class="act" id="phoneBtn" type="button">Телефон</button>
+    <button class="act" id="fullBtn" type="button">На весь экран</button>
     <button class="icon-btn" id="bell" type="button" aria-label="Уведомления">🔔</button>
     <button class="icon-btn" id="soundBtn" type="button" aria-label="Звук">${state.sound ? '🔊' : '🔇'}</button>
     <button class="avatar" id="avatar" type="button">${esc((state.me && state.me.name || 'Д').slice(0, 1))}</button>`;
@@ -189,29 +188,25 @@ function sectionButton(item, extra) {
 
 function renderSections() {
   const q = state.query.trim().toLowerCase();
-  const known = new Set(PRIMARY.flatMap((group) => group.items.map((item) => item.id)));
-  const groups = PRIMARY.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !q || item.name.toLowerCase().includes(q) || group.group.toLowerCase().includes(q))
-  })).filter((group) => group.items.length);
-  const extras = new Map();
-  state.catalog.forEach((item) => {
-    if (known.has(item.id)) return;
-    if (q && !item.name.toLowerCase().includes(q) && !item.group.toLowerCase().includes(q)) return;
-    if (!extras.has(item.group)) extras.set(item.group, []);
-    extras.get(item.group).push(item);
-  });
-  extras.forEach((items, group) => groups.push({ group, items }));
-  const pins = state.pins
-    .map((id) => catalogItem(id) || PRIMARY.flatMap((group) => group.items).find((item) => item.id === id))
-    .filter(Boolean)
-    .filter((item) => !q || item.name.toLowerCase().includes(q));
-  const pinHtml = pins.length ? `<button class="group-h" type="button">Избранное <b>${pins.length}</b></button>${pins.map((item) => sectionButton(item)).join('')}` : '';
-  $('sections').innerHTML = pinHtml + groups.map((group) => {
-    const closed = state.collapsed[group.group];
-    return `<button class="group-h" data-group="${esc(group.group)}" type="button">${closed ? '▸' : '▾'} ${esc(group.group)} <b>${group.items.length}</b></button>
-      ${closed ? '' : group.items.map((item) => sectionButton(item, item.hint)).join('')}`;
-  }).join('');
+  const core = PRIMARY.flatMap((group) => group.items)
+    .filter((item) => !q || item.name.toLowerCase().includes(q) || item.hint.toLowerCase().includes(q));
+  let html = `<button class="group-h" type="button">На вечер <b>${core.length}</b></button>${core.map((item) => sectionButton(item, item.hint)).join('')}`;
+  if (q || state.catalogOpen) {
+    const known = new Set(core.map((item) => item.id));
+    const extras = new Map();
+    state.catalog.forEach((item) => {
+      if (known.has(item.id)) return;
+      if (q && !item.name.toLowerCase().includes(q) && !item.group.toLowerCase().includes(q)) return;
+      if (!extras.has(item.group)) extras.set(item.group, []);
+      extras.get(item.group).push(item);
+    });
+    extras.forEach((items, group) => {
+      const closed = q ? false : !state.collapsed[group];
+      html += `<button class="group-h" data-group="${esc(group)}" type="button">${closed ? '▸' : '▾'} ${esc(group)} <b>${items.length}</b></button>`;
+      if (!closed) html += items.map((item) => sectionButton(item, item.blurb)).join('');
+    });
+  }
+  $('sections').innerHTML = html;
 }
 
 function overlayRow() {
@@ -226,12 +221,12 @@ function splashDock() {
   const splash = (state.live && state.live.splash) || {};
   const mode = splash.mode || 'normal';
   const mark = (value) => mode === value ? 'on' : '';
-  return `<div class="dock-row"><span class="lbl">НА ЭКРАНЕ</span>
+  return `<div class="dock-row"><span class="lbl">На экране</span>
+      <input class="inline-title" id="inlineTitle" value="${esc(splash.title || '')}" aria-label="Заголовок на экране" placeholder="Заголовок для зала">
       <button class="chip ${mark('normal')}" data-mode="normal" type="button">Обычная</button>
       <button class="chip ${mark('photo')}" data-mode="photo" type="button">Фото</button>
       <button class="chip ${mark('slideshow')}" data-mode="slideshow" type="button">Слайдшоу</button>
       <button class="chip ${mark('video')}" data-mode="video" type="button">Видео</button>
-      <button class="chip ${mark('ready')}" data-setup="ready" type="button">Готовые и мои</button>
     </div>
     ${overlayRow()}
     <div class="dock-row"><span class="lbl">НАСТРОИТЬ</span>
@@ -287,9 +282,21 @@ function timingDock() {
   </div>${overlayRow()}`;
 }
 
+const LIVE_NAME = { splash: 'Заставка', wheel: 'Колесо', timer: 'Таймер', quiz: 'Квиз', board: 'Табло', timing: 'Тайминг' };
+
 function renderDock() {
+  const editing = document.activeElement && document.activeElement.id === 'inlineTitle';
+  const typed = editing ? document.activeElement.value : null;
+  const caret = editing ? document.activeElement.selectionStart : null;
   const map = { splash: splashDock, wheel: wheelDock, timer: timerDock, quiz: quizDock, board: boardDock, timing: timingDock };
   $('dock').innerHTML = (map[state.tool] || splashDock)();
+  const live = $('liveLine');
+  if (live) live.textContent = 'На экране · ' + (LIVE_NAME[state.tool] || 'Сцена');
+  if (editing && $('inlineTitle')) {
+    $('inlineTitle').value = typed;
+    $('inlineTitle').focus();
+    $('inlineTitle').setSelectionRange(caret, caret);
+  }
 }
 
 function showTypes(anchor) {
@@ -331,8 +338,8 @@ function showBell(anchor) {
 
 function showCabinet(anchor) {
   const me = state.me || {};
-  openPopover(anchor, `<h3>${esc(me.name || 'Ведущий')}</h3><p>${esc(me.email || '')}</p><p>Демо без пароля. Карточка, календарь и статусы — в «Мои праздники».</p>
-    <div class="row"><button class="btn" data-open="holidays" type="button">Праздники</button></div>`);
+  openPopover(anchor, `<h3>${esc(me.name || 'Ведущий')}</h3><p>${esc(me.email || '')}</p><p>Демо без пароля. Карточка и календарь — в «Праздники».</p>
+    <div class="row"><button class="btn" data-open="holidays" type="button">Праздники</button><button class="btn ghost" data-open="kp" type="button">КП</button><button class="btn ghost" data-open="partner" type="button">Партнёрка</button></div>`);
 }
 
 function holidayForm(event) {
@@ -398,8 +405,8 @@ function showSets(anchor) {
 function tourSteps() {
   return [
     ['Пульт', 'Слева разделы, по центру тот же экран, который уйдёт на проектор, снизу кнопки текущей сцены.'],
-    ['Второй экран', 'Оранжевая кнопка открывает проектор в новом окне. Потеря Wi‑Fi не стирает уже открытую сцену.'],
-    ['Телефон', 'Бирюзовая кнопка показывает код гостей. В этой сборке телефон только присоединяется к залу.'],
+    ['Второй экран', 'Кнопка справа открывает проектор в новом окне. Уже открытая сцена не зависит от сети зала.'],
+    ['Телефон', 'Кнопка «Телефон» показывает код гостей. В этой сборке телефон только присоединяется к залу.'],
     ['Заставка', 'Обычная, фото, слайдшоу и видео меняют центр. Салют, конфетти и фанфары ложатся поверх.']
   ];
 }
@@ -478,7 +485,10 @@ document.addEventListener('click', async (event) => {
       const item = catalogItem(target.dataset.tool) || { id: target.dataset.tool, name: target.dataset.tool, enabled: enabled(target.dataset.tool) };
       if (!item.enabled) return showLocked(item, target);
       state.tool = item.id;
+      renderSections();
       await act({ action: 'setTool', tool: item.id });
+      const frame = $('screen');
+      if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'preset', tool: item.id }, location.origin);
       closePopover();
       return;
     }
@@ -515,7 +525,13 @@ document.addEventListener('click', async (event) => {
       return;
     }
     if (target.id === 'avatar') return showCabinet(target);
-    if (target.id === 'openSets' || target.id === 'addSet') return showSets(target);
+    if (target.id === 'addSet') {
+      state.catalogOpen = !state.catalogOpen;
+      renderSections();
+      toast(state.catalogOpen ? 'Каталог открыт. Лишние разделы закрыты замком.' : 'Снова короткий список вечера.');
+      return;
+    }
+    if (target.id === 'openSets') return showSets(target);
     if (target.dataset.set) {
       state.pins = SETS[target.dataset.set].slice();
       localStorage.setItem('pe-pins', JSON.stringify(state.pins));
@@ -695,7 +711,7 @@ function tick() {
     const left = Math.max(0, state.me.trialEndsAt - Date.now());
     const hours = Math.floor(left / 3600000);
     const mins = Math.floor((left % 3600000) / 60000);
-    $('demoPill').textContent = `Демо-доступ: осталось ${hours} ч ${mins} мин`;
+    $('demoPill').textContent = `Демо · ${hours} ч`;
   }
 }
 
@@ -715,6 +731,15 @@ async function boot() {
   setInterval(tick, 30000);
   $('screen').addEventListener('load', () => { postSound(); applyZoom(); });
   $('search').addEventListener('input', () => { state.query = $('search').value; renderSections(); });
+  let titleTimer = 0;
+  document.addEventListener('input', (event) => {
+    if (event.target.id !== 'inlineTitle') return;
+    clearTimeout(titleTimer);
+    const value = event.target.value;
+    titleTimer = setTimeout(() => {
+      saveSplash({ title: value }).catch((error) => toast(error.message));
+    }, 400);
+  });
   $('zoomIn').onclick = () => { state.zoom = Math.min(160, state.zoom + 10); applyZoom(); };
   $('zoomOut').onclick = () => { state.zoom = Math.max(60, state.zoom - 10); applyZoom(); };
   $('sideToggle').onclick = () => $('side').classList.toggle('open');

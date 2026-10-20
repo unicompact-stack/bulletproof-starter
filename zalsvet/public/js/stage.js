@@ -1,5 +1,6 @@
 const code = location.pathname.split('/').filter(Boolean).pop();
 const stage = document.getElementById('stage');
+const content = document.getElementById('stageContent');
 const soundBtn = document.getElementById('sound');
 const fx = document.getElementById('fx');
 let audioOn = false;
@@ -31,6 +32,7 @@ window.addEventListener('message', async (event) => {
   if (event.data.type === 'zoom') {
     document.documentElement.style.setProperty('--stage-zoom', String((Number(event.data.value) || 100) / 100));
   }
+  if (event.data.type === 'preset') poll();
 });
 
 function audioCtx() {
@@ -64,7 +66,7 @@ function confetti() {
     y: -20 - Math.random() * 240,
     v: 2 + Math.random() * 4,
     s: 5 + Math.random() * 7,
-    c: ['#e4c07a', '#ff5d78', '#7eb6ff', '#3ddeb4', '#fff'][Math.floor(Math.random() * 5)]
+    c: ['#e8c27a', '#8b5cf6', '#f5f1ea', '#3ddeb4', '#ff5d78'][Math.floor(Math.random() * 5)]
   }));
   let frame = 0;
   function draw() {
@@ -91,7 +93,7 @@ function drawWheel(canvas, names) {
   names.forEach((name, i) => {
     ctx.beginPath();
     ctx.moveTo(r, r);
-    ctx.fillStyle = ['#e23b55', '#1c2433', '#d7b06a', '#2a3344'][i % 4];
+    ctx.fillStyle = ['#8b5cf6', '#1a1724', '#e8c27a', '#12101a'][i % 4];
     ctx.arc(r, r, r - 6, i * seg - Math.PI / 2, (i + 1) * seg - Math.PI / 2);
     ctx.fill();
     ctx.save();
@@ -109,7 +111,7 @@ let slideTimer = 0;
 let lastOverlay = 0;
 
 function symbolSvg() {
-  return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="18" fill="none" stroke="#e07a3d" stroke-width="3"/><circle cx="32" cy="32" r="4" fill="#e07a3d"/></svg>`;
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 46 L32 14 L50 46" fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linejoin="round"/><path d="M20 46h24" stroke="#e8c27a" stroke-width="2.5" stroke-linecap="round"/></svg>`;
 }
 
 function mountSplash(event, live) {
@@ -124,7 +126,7 @@ function mountSplash(event, live) {
   } else if (mode === 'video' && splash.video) {
     media = `<video class="splash-video" src="${esc(splash.video)}" autoplay muted loop playsinline></video>`;
   }
-  stage.innerHTML = `
+  content.innerHTML = `
     <div class="splash-scene tpl-${esc(splash.template || 'gold')} ${media ? 'has-media' : ''}">
       ${media}
       <div class="splash-card">
@@ -170,7 +172,7 @@ function salute() {
             y: burst.y,
             vx: (Math.random() - 0.5) * 7,
             vy: (Math.random() - 0.5) * 7,
-            c: ['#ffe08a', '#ff5d8f', '#fff', '#7ee0ff'][Math.floor(Math.random() * 4)]
+            c: ['#e8c27a', '#8b5cf6', '#fff', '#3ddeb4'][Math.floor(Math.random() * 4)]
           }));
         }
       } else {
@@ -208,13 +210,13 @@ function playOverlay(type) {
 
 function mountWheel(live) {
   const names = live.wheel.names || [];
-  stage.innerHTML = `
-    <div>
+  content.innerHTML = `
+    <div class="plate">
       <div class="kicker">Колесо гостей</div>
       <div class="wheel-box">
         <div class="pointer"></div>
         <canvas class="wheel" id="wheel"></canvas>
-        <div class="hub">PULT</div>
+        <div class="hub">Зал</div>
       </div>
       <div class="winner" id="winner" style="display:none"><span>Выпадает</span><b></b></div>
     </div>`;
@@ -245,8 +247,8 @@ function mountWheel(live) {
 }
 
 function mountTimer(live) {
-  stage.innerHTML = `
-    <div>
+  content.innerHTML = `
+    <div class="plate">
       <div class="kicker">${esc(live.timer.label || 'Таймер')}</div>
       <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
         <circle class="track" cx="60" cy="60" r="52"></circle>
@@ -282,12 +284,12 @@ function updateTimer(live) {
 function mountQuiz(event, live) {
   const q = live.quiz.questions[live.quiz.index];
   if (!q) {
-    stage.innerHTML = '<div><div class="kicker">Квиз</div><h1>Вопросов пока нет</h1></div>';
+    content.innerHTML = '<div class="plate"><div class="kicker">Квиз</div><h1>Вопросов пока нет</h1></div>';
     return;
   }
   const letters = ['A', 'B', 'C', 'D'];
-  stage.innerHTML = `
-    <div style="width:min(980px,94vw)">
+  content.innerHTML = `
+    <div class="plate" style="width:min(980px,94vw)">
       <div class="kicker">Вопрос ${live.quiz.index + 1} из ${live.quiz.questions.length} · ${esc(phaseText(live.quiz.phase))}</div>
       <h1 style="font-size:clamp(32px,4.6vw,68px)">${esc(q.q)}</h1>
       <div class="opts">
@@ -325,8 +327,8 @@ function mountBoard(live) {
   const teams = live.board.teams || [];
   const max = Math.max(1, ...teams.map((t) => t.score || 0));
   const winner = teams.slice().sort((a, b) => (b.score || 0) - (a.score || 0))[0];
-  stage.innerHTML = `
-    <div style="width:min(1100px,94vw)">
+  content.innerHTML = `
+    <div class="plate" style="width:min(1100px,94vw)">
       <div class="kicker">${live.board.announced ? 'Победитель' : 'Табло команд'}</div>
       ${live.board.announced && winner ? `<h1>${esc(winner.name)}</h1>` : '<h1 style="font-size:42px">Счёт вечера</h1>'}
       <div class="board">
@@ -349,8 +351,8 @@ function mountBoard(live) {
 
 function mountTiming(live) {
   const items = live.timing.items || [];
-  stage.innerHTML = `
-    <div>
+  content.innerHTML = `
+    <div class="plate">
       <div class="kicker">Тайминг вечера</div>
       <h1 style="font-size:clamp(32px,5vw,64px)">${esc((items[live.timing.current] || {}).title || 'Программа')}</h1>
       <div class="timeline">
@@ -385,22 +387,83 @@ function sign(live) {
   ].join('|');
 }
 
-function render(event, live) {
-  document.title = `${event.title} — экран`;
-  stage.classList.toggle('on-splash', live.tool === 'splash' || !live.tool);
-  if (live.tool === 'wheel') mountWheel(live);
-  else if (live.tool === 'timer') mountTimer(live);
-  else if (live.tool === 'quiz') mountQuiz(event, live);
-  else if (live.tool === 'board') mountBoard(live);
-  else if (live.tool === 'timing') mountTiming(live);
-  else mountSplash(event, live);
+const STAGE_PRESETS = {
+  splash: { hall: 0.34, hue: 0, beams: [-24, -8, 10, 26], beam: 0.9 },
+  guests: { hall: 0.26, hue: 16, beams: [-16, -4, 8, 18], beam: 0.72 },
+  quiz: { hall: 0.16, hue: -26, beams: [-8, -2, 4, 10], beam: 0.5 },
+  board: { hall: 0.22, hue: 10, beams: [-12, -3, 3, 12], beam: 1 },
+  timer: { hall: 0.08, hue: -6, beams: [-6, 0, 6, 12], beam: 0.32 },
+  dj: { hall: 0.18, hue: 42, beams: [-30, -12, 14, 32], beam: 0.95 }
+};
+const TOOL_PRESET = { splash: 'splash', wheel: 'guests', quiz: 'quiz', board: 'board', timer: 'timer', timing: 'splash', dj: 'dj' };
+const PRESET_NAMES = Object.keys(STAGE_PRESETS);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let shownTool = '';
+let swapTimer = 0;
+let queued = null;
+let fading = false;
+
+function presetOf(tool) {
+  return TOOL_PRESET[tool] || 'splash';
+}
+
+function applyPreset(tool) {
+  const name = presetOf(tool);
+  const preset = STAGE_PRESETS[name];
+  PRESET_NAMES.forEach((item) => stage.classList.toggle('preset-' + item, item === name));
+  stage.dataset.preset = name;
+  stage.style.setProperty('--hall-opacity', String(preset.hall));
+  stage.style.setProperty('--stage-hue', preset.hue + 'deg');
+  stage.style.setProperty('--beam-opacity', String(preset.beam));
+  preset.beams.forEach((deg, index) => stage.style.setProperty('--beam-' + index, deg + 'deg'));
+}
+
+function paint(event, live) {
+  document.title = event.title + ' — экран';
+  applyPreset(live.tool);
+  const changed = (live.tool || 'splash') !== shownTool;
+  const draw = () => {
+    if (live.tool === 'wheel') mountWheel(live);
+    else if (live.tool === 'timer') mountTimer(live);
+    else if (live.tool === 'quiz') mountQuiz(event, live);
+    else if (live.tool === 'board') mountBoard(live);
+    else if (live.tool === 'timing') mountTiming(live);
+    else mountSplash(event, live);
+    shownTool = live.tool || 'splash';
+  };
+  if (changed && !reduceMotion && content.childElementCount) {
+    fading = true;
+    content.classList.add('out');
+    window.setTimeout(() => {
+      draw();
+      fading = false;
+      content.classList.remove('out');
+      content.classList.add('in');
+      window.setTimeout(() => content.classList.remove('in'), 360);
+      if (queued && (queued.live.tool || 'splash') !== shownTool) queueScene(queued.event, queued.live);
+    }, 200);
+    return;
+  }
+  draw();
+}
+
+function queueScene(event, live) {
+  queued = { event, live };
+  if (swapTimer || fading) return;
+  swapTimer = window.setTimeout(() => {
+    swapTimer = 0;
+    const item = queued;
+    if (!item) return;
+    signature = sign(item.live);
+    paint(item.event, item.live);
+  }, reduceMotion ? 0 : 250);
 }
 
 async function poll() {
   try {
     const res = await fetch(`/api/public/${code}`);
     if (!res.ok) {
-      stage.innerHTML = '<div><h1>Комната не найдена</h1><p>Проверьте код экрана.</p></div>';
+      content.innerHTML = '<div class="plate"><h1>Комната не найдена</h1><p>Проверьте код экрана.</p></div>';
       return;
     }
     const data = await res.json();
@@ -411,13 +474,14 @@ async function poll() {
       if (Date.now() - (overlay.at || 0) < 4000) playOverlay(overlay.type);
     }
     const next = sign(data.live);
-    if (next !== signature) {
+    if ((data.live.tool || 'splash') !== shownTool) queueScene(data.event, data.live);
+    else if (next !== signature) {
       signature = next;
-      render(data.event, data.live);
+      paint(data.event, data.live);
     } else if (data.live.tool === 'quiz') updateQuiz(data.live);
-    if (data.live.tool === 'timer') updateTimer(data.live);
+    if (data.live.tool === 'timer' && shownTool === 'timer') updateTimer(data.live);
   } catch {
-    stage.innerHTML = '<div><h1>Нет связи со сценой</h1></div>';
+    content.innerHTML = '<div class="plate"><h1>Нет связи со сценой</h1></div>';
   }
 }
 
