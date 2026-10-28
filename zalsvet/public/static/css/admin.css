@@ -1,0 +1,345 @@
+/* Оформление текущего пульта. Сетку не меняет. */
+
+body.app-body {
+  font-family: var(--font);
+  color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 520px at 12% -10%, rgba(168, 85, 247, 0.16), transparent 60%),
+    radial-gradient(760px 560px at 105% 110%, rgba(99, 60, 180, 0.14), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+  background-attachment: fixed;
+}
+
+.brand b,
+.clock-block strong {
+  font-family: var(--font-display);
+}
+
+.brand small {
+  color: var(--neon-soft);
+}
+
+.topbar,
+.side {
+  background: rgba(14, 17, 24, 0.78);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.stage-col {
+  background:
+    radial-gradient(680px 220px at 50% 0%, rgba(168, 85, 247, 0.14), transparent 62%),
+    transparent;
+}
+
+.top-nav {
+  flex: 0 1 auto;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--panel-deep);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.55);
+}
+
+.top-actions {
+  margin-left: auto;
+}
+
+.act,
+.save-btn,
+.holidays-card,
+.gear {
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.act,
+.gear,
+.holidays-card {
+  color: #d5dce6;
+  background: linear-gradient(180deg, #2a3140 0%, #151a23 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: var(--edge-light);
+  box-shadow:
+    0 3px 0 var(--edge-dark),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.act:active,
+.gear:active,
+.holidays-card:active,
+.save-btn:active,
+.icon-btn:active,
+.avatar:active {
+  transform: translateY(2px);
+}
+
+#secondScreen {
+  color: #fff;
+  background: linear-gradient(180deg, #ffb59e 0%, var(--coral) 46%, var(--coral-deep) 100%);
+  border-color: rgba(190, 48, 24, 0.65);
+  border-top-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 3px 0 var(--edge-dark),
+    0 0 14px var(--coral-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.save-btn {
+  color: #fff;
+  background: linear-gradient(180deg, #c48afd 0%, var(--neon) 48%, #8c2fe6 100%);
+  border: 1px solid rgba(124, 36, 209, 0.7);
+  border-top-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 3px 0 var(--edge-dark),
+    0 0 16px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.avatar {
+  color: #fff;
+  background: linear-gradient(160deg, #c084fc, #7c3aed);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 3px 0 var(--edge-dark), 0 0 12px var(--glow-soft);
+}
+
+.holidays-card {
+  border-radius: 16px;
+  text-align: left;
+}
+
+.holidays-card i {
+  background: linear-gradient(160deg, #c084fc, #7c3aed);
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.gear {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.stage-frame {
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.dock {
+  background: var(--panel-deep);
+  border-color: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+.lbl,
+.sec-head {
+  color: #b7c0cc;
+  letter-spacing: 0.16em;
+}
+
+.linkish,
+.star.on,
+.tag,
+.live-pill {
+  color: var(--neon-soft);
+}
+
+.dot {
+  color: var(--c-green);
+}
+
+.search-row input,
+.field,
+textarea,
+select,
+.inline-title {
+  color: var(--text);
+  background: rgba(9, 11, 16, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.search-row input:focus,
+.field:focus,
+textarea:focus,
+select:focus,
+.inline-title:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+.popover,
+.tour,
+.modal {
+  background: rgba(16, 20, 28, 0.94);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-top-color: var(--edge-bright);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 0 22px rgba(168, 85, 247, 0.12);
+}
+
+.zoom {
+  background: rgba(10, 12, 18, 0.72);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.zoom button {
+  border-radius: 50%;
+}
+
+.group-h,
+.star,
+.linkish {
+  border-radius: 10px;
+}
+
+/* Любая кнопка при наведении загорается. Правило последним, чтобы его не перебили. */
+.app button:hover,
+.modal button:hover,
+.popover button:hover,
+.tour button:hover,
+.zoom button:hover {
+  color: #fff;
+  filter: brightness(1.16) drop-shadow(0 0 8px rgba(168, 85, 247, 0.85));
+  border-color: rgba(216, 180, 254, 0.7);
+}
+
+#secondScreen:hover {
+  filter: brightness(1.14) drop-shadow(0 0 10px rgba(244, 84, 47, 0.85));
+  border-color: rgba(255, 210, 190, 0.8);
+}
+
+.sec:hover {
+  background: rgba(168, 85, 247, 0.16);
+}
+
+.pill:hover,
+.type-btn:hover {
+  background: rgba(168, 85, 247, 0.28);
+  box-shadow: inset 0 0 12px rgba(168, 85, 247, 0.35);
+}
+
+.linkish:hover,
+.star:hover,
+.group-h:hover {
+  background: rgba(168, 85, 247, 0.16);
+}
+
+.host-bubble {
+  position: absolute;
+  z-index: 3;
+  width: clamp(84px, 24%, 148px);
+  aspect-ratio: 1;
+  right: 16px;
+  bottom: 18px;
+  touch-action: none;
+  user-select: none;
+}
+.host-bubble[hidden] { display: none !important; }
+.host-bubble-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  background: #1a1428;
+  border: 3px solid rgba(232, 210, 255, 0.92);
+  box-shadow:
+    0 0 0 5px rgba(168, 85, 247, 0.32),
+    0 0 26px rgba(168, 85, 247, 0.72),
+    0 12px 24px rgba(0, 0, 0, 0.45);
+}
+.host-bubble.is-drag .host-bubble-ring { cursor: grabbing; }
+.host-bubble video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+  pointer-events: none;
+  background: #120e18;
+}
+.host-bubble.has-video video { display: block; }
+.host-bubble.has-video .host-face { display: none; }
+.host-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.host-face svg { width: 100%; height: 100%; display: block; }
+.host-face span {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 16%;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.host-bubble-x,
+.host-bubble-file {
+  position: absolute;
+  z-index: 2;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(12, 10, 18, 0.82);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.45);
+  font-size: 12px;
+  font-weight: 800;
+}
+.host-bubble-x { top: 6%; right: 6%; width: 22px; }
+.host-bubble-file { left: 50%; bottom: 7%; transform: translateX(-50%); padding: 0 7px; font-size: 9px; letter-spacing: 0.04em; }
+.host-bubble-size {
+  position: absolute;
+  right: 6%;
+  bottom: 6%;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: #a855f7;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.85);
+  font-size: 14px;
+  line-height: 1;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.host-toggle {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d5dce6;
+  background: linear-gradient(180deg, #2a3140, #151a23);
+  font-weight: 700;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.host-toggle.is-on {
+  color: #fff;
+  border-color: rgba(168, 85, 247, 0.55);
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.45), rgba(168, 85, 247, 0.16));
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}

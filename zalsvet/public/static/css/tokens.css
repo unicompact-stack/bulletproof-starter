@@ -1,0 +1,36 @@
+/* ЗалСвет: токены стеклянного пульта. Только переменные. */
+:root {
+  --bg: #090b10;
+  --panel: rgba(25, 30, 40, 0.72);
+  --panel-deep: rgba(9, 11, 16, 0.62);
+  --neon: #a855f7;
+  --neon-soft: #d8b4fe;
+  --glow: rgba(168, 85, 247, 0.42);
+  --glow-soft: rgba(168, 85, 247, 0.22);
+  --coral: #f97362;
+  --coral-deep: #e8442a;
+  --coral-glow: rgba(244, 84, 47, 0.5);
+  --c-blue: #3b82f6;
+  --c-orange: #f97316;
+  --c-magenta: #ec4899;
+  --c-cyan: #22d3ee;
+  --c-green: #34d399;
+  --text: #ffffff;
+  --muted: #9aa3b2;
+  --edge-light: rgba(255, 255, 255, 0.14);
+  --edge-bright: rgba(216, 180, 254, 0.5);
+  --edge-dark: rgba(0, 0, 0, 0.8);
+  --r-panel: 28px;
+  --r-screen: 36px;
+  --r-chunk: 20px;
+  --r-pill: 999px;
+  --font: "Exo 2", "Segoe UI", sans-serif;
+  --font-display: "Unbounded", "Exo 2", sans-serif;
+  /* Старые имена в console.css, чтобы золото не спорило с неоном. */
+  --brand: #a855f7;
+  --gold: #d8b4fe;
+  --bg-deep: #090b10;
+  --bg-panel: rgba(18, 22, 31, 0.78);
+  --bg-elevated: #1a2030;
+  --line: rgba(255, 255, 255, 0.1);
+}

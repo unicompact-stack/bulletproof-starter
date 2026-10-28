@@ -715,6 +715,260 @@ function tick() {
   }
 }
 
+function avatarStore() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('zalsvet-avatar', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('clip');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function readAvatarPlace() {
+  try { return JSON.parse(localStorage.getItem('zs-avatar') || 'null'); }
+  catch (error) { return null; }
+}
+
+function writeAvatarPlace(extra) {
+  const prev = readAvatarPlace() || {};
+  localStorage.setItem('zs-avatar', JSON.stringify(Object.assign({}, prev, extra)));
+}
+
+function avatarChannel() {
+  if (!avatarChannel.bus) {
+    try { avatarChannel.bus = new BroadcastChannel('zalsvet-avatar'); }
+    catch (error) { avatarChannel.bus = null; }
+  }
+  return avatarChannel.bus;
+}
+
+function publishAvatar(kind) {
+  const frame = $('stageFrame');
+  const bubble = $('hostBubble');
+  const saved = readAvatarPlace() || {};
+  const msg = kind === 'video' ? { type: 'avatar-video' } : {
+    type: 'avatar',
+    hidden: bubble ? !!bubble.hidden : !!saved.hidden,
+    x: saved.x,
+    y: saved.y,
+    s: saved.s
+  };
+  const bus = avatarChannel();
+  if (bus) bus.postMessage(msg);
+  const screen = $('screen');
+  if (screen && screen.contentWindow) screen.contentWindow.postMessage(msg, location.origin);
+}
+
+function placeHostBubble(left, top, remember) {
+  const frame = $('stageFrame');
+  const bubble = $('hostBubble');
+  if (!frame || !bubble) return;
+  const maxX = Math.max(8, frame.clientWidth - bubble.offsetWidth - 8);
+  const maxY = Math.max(8, frame.clientHeight - bubble.offsetHeight - 8);
+  const x = Math.min(maxX, Math.max(8, left));
+  const y = Math.min(maxY, Math.max(8, top));
+  bubble.style.right = 'auto';
+  bubble.style.bottom = 'auto';
+  bubble.style.left = x + 'px';
+  bubble.style.top = y + 'px';
+  if (remember) {
+    writeAvatarPlace({
+      x: x / frame.clientWidth,
+      y: y / frame.clientHeight,
+      s: bubble.offsetWidth / frame.clientWidth
+    });
+    publishAvatar();
+  }
+}
+
+function applyHostSize(px, remember) {
+  const frame = $('stageFrame');
+  const bubble = $('hostBubble');
+  if (!frame || !bubble) return;
+  const max = Math.min(frame.clientWidth, frame.clientHeight) * 0.46;
+  const size = Math.max(72, Math.min(max, px));
+  bubble.style.width = size + 'px';
+  if (remember) writeAvatarPlace({ s: size / frame.clientWidth });
+}
+
+function layoutHostBubble() {
+  const frame = $('stageFrame');
+  const bubble = $('hostBubble');
+  if (!frame || !bubble || bubble.hidden) return;
+  const saved = readAvatarPlace();
+  if (saved && typeof saved.s === 'number') applyHostSize(saved.s * frame.clientWidth, false);
+  if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+    placeHostBubble(saved.x * frame.clientWidth, saved.y * frame.clientHeight, false);
+    return;
+  }
+  placeHostBubble(frame.clientWidth - bubble.offsetWidth - 16, frame.clientHeight - bubble.offsetHeight - 18, false);
+}
+
+function setHostBubble(visible) {
+  const bubble = $('hostBubble');
+  const toggle = $('hostBubbleToggle');
+  bubble.hidden = !visible;
+  toggle.classList.toggle('is-on', visible);
+  toggle.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  writeAvatarPlace({ hidden: !visible });
+  publishAvatar();
+  if (visible) requestAnimationFrame(layoutHostBubble);
+}
+
+function showHostVideo(blob) {
+  const video = $('hostVideo');
+  const bubble = $('hostBubble');
+  if (video._url) URL.revokeObjectURL(video._url);
+  video._url = URL.createObjectURL(blob);
+  video.src = video._url;
+  bubble.classList.add('has-video');
+  video.muted = true;
+  video.play().catch(() => {});
+}
+
+async function saveHostVideo(file) {
+  const db = await avatarStore();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('clip', 'readwrite');
+    tx.objectStore('clip').put(file, 'host');
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function loadHostVideo() {
+  try {
+    const db = await avatarStore();
+    const file = await new Promise((resolve, reject) => {
+      const tx = db.transaction('clip', 'readonly');
+      const req = tx.objectStore('clip').get('host');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    if (file) showHostVideo(file);
+  } catch (error) {
+    /* видео можно выбрать заново */
+  }
+}
+
+function bindHostBubble() {
+  const bubble = $('hostBubble');
+  const drag = $('hostBubbleDrag');
+  const file = $('hostVideoFile');
+  const video = $('hostVideo');
+  if (!bubble || !drag) return;
+  const saved = readAvatarPlace();
+  setHostBubble(!(saved && saved.hidden));
+  loadHostVideo();
+  window.addEventListener('resize', layoutHostBubble);
+  if (window.ResizeObserver) new ResizeObserver(layoutHostBubble).observe($('stageFrame'));
+
+  let dragState = null;
+  drag.addEventListener('pointerdown', (event) => {
+    if (event.button != null && event.button !== 0) return;
+    const rect = bubble.getBoundingClientRect();
+    dragState = {
+      id: event.pointerId,
+      dx: event.clientX - rect.left,
+      dy: event.clientY - rect.top,
+      x: event.clientX,
+      y: event.clientY,
+      moved: false
+    };
+    bubble.classList.add('is-drag');
+    drag.setPointerCapture(event.pointerId);
+  });
+  drag.addEventListener('pointermove', (event) => {
+    if (!dragState || event.pointerId !== dragState.id) return;
+    if (Math.hypot(event.clientX - dragState.x, event.clientY - dragState.y) > 4) dragState.moved = true;
+    const frame = $('stageFrame').getBoundingClientRect();
+    placeHostBubble(event.clientX - frame.left - dragState.dx, event.clientY - frame.top - dragState.dy, true);
+  });
+  drag.addEventListener('pointerup', (event) => {
+    if (!dragState || event.pointerId !== dragState.id) return;
+    const moved = dragState.moved;
+    dragState = null;
+    bubble.classList.remove('is-drag');
+    if (moved) return;
+    if (!bubble.classList.contains('has-video')) {
+      file.click();
+      return;
+    }
+    video.muted = !video.muted;
+    video.play().catch(() => toast('Браузер не пустил звук. Нажмите на кружок ещё раз.'));
+    toast(video.muted ? 'Звук кружка выключен' : 'Звук кружка включён');
+  });
+
+  $('hostBubbleClose').addEventListener('click', (event) => {
+    event.stopPropagation();
+    setHostBubble(false);
+  });
+  $('hostBubbleFile').addEventListener('click', (event) => {
+    event.stopPropagation();
+    file.click();
+  });
+  $('hostBubbleToggle').addEventListener('click', (event) => {
+    event.stopPropagation();
+    setHostBubble(bubble.hidden);
+  });
+  file.addEventListener('change', async () => {
+    const picked = file.files && file.files[0];
+    file.value = '';
+    if (!picked) return;
+    if (!picked.type.startsWith('video/')) {
+      toast('Нужен файл видео');
+      return;
+    }
+    if (picked.size > 40 * 1024 * 1024) {
+      toast('Видео больше 40 МБ. Возьмите короче.');
+      return;
+    }
+    showHostVideo(picked);
+    setHostBubble(true);
+    toast('Видео в кружке. На втором экране гости увидят его вместе с залом.');
+    try {
+      await saveHostVideo(picked);
+      publishAvatar('video');
+    } catch (error) {
+      toast('Видео играет на пульте, но второй экран его не получил. Выберите файл ещё раз.');
+    }
+  });
+
+  const sizeHandle = $('hostBubbleSize');
+  sizeHandle.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startW = bubble.offsetWidth;
+    const left = bubble.offsetLeft;
+    const top = bubble.offsetTop;
+    sizeHandle.setPointerCapture(event.pointerId);
+    function move(ev) {
+      if (ev.pointerId !== event.pointerId) return;
+      applyHostSize(startW + (ev.clientX - startX), false);
+      placeHostBubble(left, top, true);
+    }
+    function up(ev) {
+      if (ev.pointerId !== event.pointerId) return;
+      sizeHandle.removeEventListener('pointermove', move);
+      sizeHandle.removeEventListener('pointerup', up);
+      applyHostSize(bubble.offsetWidth, true);
+      placeHostBubble(left, top, true);
+    }
+    sizeHandle.addEventListener('pointermove', move);
+    sizeHandle.addEventListener('pointerup', up);
+  });
+  sizeHandle.addEventListener('click', (event) => event.stopPropagation());
+  requestAnimationFrame(() => {
+    layoutHostBubble();
+    const saved = readAvatarPlace();
+    if (!saved || typeof saved.x !== 'number') placeHostBubble(bubble.offsetLeft, bubble.offsetTop, true);
+    else publishAvatar();
+  });
+}
+
 async function boot() {
   const me = await api('/api/auth/me');
   state.me = me.user;
@@ -749,6 +1003,7 @@ async function boot() {
     if (event.target.id === 'tourSkip') { state.tour = 99; renderTour(); }
   });
   if (!localStorage.getItem('pe-tour')) renderTour();
+  bindHostBubble();
 }
 
 boot().catch((error) => toast(error.message));

@@ -17,6 +17,7 @@ soundBtn.onclick = async () => {
   const ctx = audioCtx();
   if (ctx.state === 'suspended') await ctx.resume();
   tone(660, 0.08);
+  syncHallAvatarSound();
 };
 
 window.addEventListener('message', async (event) => {
@@ -28,7 +29,10 @@ window.addEventListener('message', async (event) => {
       if (ctx.state === 'suspended') await ctx.resume();
       soundBtn.style.display = 'none';
     }
+    syncHallAvatarSound();
   }
+  if (event.data.type === 'avatar') applyHallAvatar(event.data);
+  if (event.data.type === 'avatar-video') loadHallAvatarVideo();
   if (event.data.type === 'zoom') {
     document.documentElement.style.setProperty('--stage-zoom', String((Number(event.data.value) || 100) / 100));
   }
@@ -485,6 +489,98 @@ async function poll() {
   }
 }
 
+function syncHallAvatarSound() {
+  const video = document.getElementById('hallAvatarVideo');
+  if (!video || !video.src) return;
+  video.muted = !audioOn;
+  if (audioOn) video.play().catch(() => {});
+}
+
+function applyHallAvatar(state) {
+  const node = document.getElementById('hallAvatar');
+  if (!node) return;
+  const hidden = state && state.hidden;
+  node.hidden = !!hidden;
+  if (node.hidden) return;
+  const s = state && typeof state.s === 'number' ? state.s : 0.18;
+  const w = Math.max(64, Math.min(stage.clientWidth * 0.46, s * stage.clientWidth));
+  node.style.width = w + 'px';
+  if (state && typeof state.x === 'number' && typeof state.y === 'number') {
+    node.style.left = (state.x * stage.clientWidth) + 'px';
+    node.style.top = (state.y * stage.clientHeight) + 'px';
+  } else {
+    node.style.left = (stage.clientWidth - w - 24) + 'px';
+    node.style.top = (stage.clientHeight - w - 28) + 'px';
+  }
+}
+
+function readHallAvatar() {
+  try { return JSON.parse(localStorage.getItem('zs-avatar') || 'null'); }
+  catch (error) { return null; }
+}
+
+async function loadHallAvatarVideo() {
+  const video = document.getElementById('hallAvatarVideo');
+  const node = document.getElementById('hallAvatar');
+  if (!video || !node) return;
+  try {
+    const file = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('zalsvet-avatar', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('clip');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction('clip', 'readonly');
+        const get = tx.objectStore('clip').get('host');
+        get.onsuccess = () => {
+          db.close();
+          resolve(get.result || null);
+        };
+        get.onerror = () => {
+          db.close();
+          reject(get.error);
+        };
+      };
+    });
+    if (!file) return;
+    if (video._url) URL.revokeObjectURL(video._url);
+    video._url = URL.createObjectURL(file);
+    video.src = video._url;
+    node.classList.add('has-video');
+    syncHallAvatarSound();
+    video.play().catch(() => {});
+  } catch (error) {
+    /* второй экран подождёт следующее видео */
+  }
+}
+
+function mountHallAvatar() {
+  if (location.search.includes('embed=1')) return;
+  const node = document.createElement('div');
+  node.id = 'hallAvatar';
+  node.className = 'hall-avatar';
+  node.hidden = true;
+  node.innerHTML = '<video id="hallAvatarVideo" playsinline loop muted></video><div class="hall-avatar-face" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="60" fill="#241833"/><ellipse cx="60" cy="98" rx="40" ry="30" fill="#2a3144"/><path d="M30 98c8-18 18-28 30-28s22 10 30 28" fill="#3d4560"/><circle cx="60" cy="54" r="26" fill="#f0c7a4"/><path d="M34 48c6-20 16-30 26-30s20 10 26 28c-8-8-16-10-26-10s-18 3-26 12z" fill="#4a3428"/><ellipse cx="50" cy="56" rx="2.4" ry="2.8" fill="#2b211c"/><ellipse cx="70" cy="56" rx="2.4" ry="2.8" fill="#2b211c"/><path d="M53 66c2.4 3 11 3 14 0" fill="none" stroke="#b56b62" stroke-width="1.8" stroke-linecap="round"/></svg></div>';
+  stage.appendChild(node);
+  applyHallAvatar(readHallAvatar());
+  loadHallAvatarVideo();
+  window.addEventListener('resize', () => applyHallAvatar(readHallAvatar()));
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'zs-avatar') applyHallAvatar(readHallAvatar());
+  });
+  try {
+    const bus = new BroadcastChannel('zalsvet-avatar');
+    bus.onmessage = (event) => {
+      if (!event.data) return;
+      if (event.data.type === 'avatar') applyHallAvatar(event.data);
+      if (event.data.type === 'avatar-video') loadHallAvatarVideo();
+    };
+  } catch (error) {
+    /* без канала второй экран читает сохранённое место */
+  }
+}
+
+mountHallAvatar();
 poll();
 setInterval(poll, 700);
 requestAnimationFrame(function tick() {

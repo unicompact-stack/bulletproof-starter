@@ -6,19 +6,23 @@
   <title>Пульт ведущего — ЗалСвет</title>
   <link rel="icon" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/console.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/console.css?v=avatar2">
+  <link rel="stylesheet" href="/static/css/tokens.css?v=avatar2">
+  <link rel="stylesheet" href="/static/css/glass.css?v=avatar2">
+  <link rel="stylesheet" href="/static/css/admin.css?v=avatar2">
 </head>
-<body>
+<body class="app-body">
   <div class="app">
     <header class="topbar">
       <button class="icon-btn side-toggle" id="sideToggle" type="button" aria-label="Разделы">☰</button>
       <a class="brand" href="/">
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <rect width="64" height="64" rx="16" fill="#12101a"/>
-          <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="none" stroke="#e8c27a" stroke-width="1.5"/>
-          <path d="M18 44 L32 16 L46 44" fill="none" stroke="#8b5cf6" stroke-width="3.5" stroke-linejoin="round"/>
-          <path d="M23 44h18" stroke="#e8c27a" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="none" stroke="#d8b4fe" stroke-width="1.5"/>
+          <path d="M18 44 L32 16 L46 44" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linejoin="round"/>
+          <path d="M23 44h18" stroke="#d8b4fe" stroke-width="2.5" stroke-linecap="round"/>
         </svg>
         <span><b>ЗалСвет</b><small>СЦЕНА</small></span>
       </a>
@@ -48,11 +52,35 @@
             <button type="button" id="zoomIn" aria-label="Увеличить">+</button>
           </div>
           <iframe id="screen" title="Экран для гостей"></iframe>
+          <div class="host-bubble" id="hostBubble">
+            <div class="host-bubble-ring" id="hostBubbleDrag" title="Тяните кружок, чтобы передвинуть">
+              <video id="hostVideo" playsinline loop muted></video>
+              <div class="host-face" id="hostFace">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <circle cx="60" cy="60" r="60" fill="#241833"/>
+                  <ellipse cx="60" cy="98" rx="40" ry="30" fill="#2a3144"/>
+                  <path d="M30 98c8-18 18-28 30-28s22 10 30 28" fill="#3d4560"/>
+                  <circle cx="60" cy="54" r="26" fill="#f0c7a4"/>
+                  <path d="M34 48c6-20 16-30 26-30s20 10 26 28c-8-8-16-10-26-10s-18 3-26 12z" fill="#4a3428"/>
+                  <ellipse cx="50" cy="56" rx="2.4" ry="2.8" fill="#2b211c"/>
+                  <ellipse cx="70" cy="56" rx="2.4" ry="2.8" fill="#2b211c"/>
+                  <path d="M53 66c2.4 3 11 3 14 0" fill="none" stroke="#b56b62" stroke-width="1.8" stroke-linecap="round"/>
+                  <rect x="52" y="80" width="16" height="12" rx="3" fill="#f4f1ea"/>
+                </svg>
+                <span>Своё видео</span>
+              </div>
+            </div>
+            <button class="host-bubble-x" id="hostBubbleClose" type="button" aria-label="Убрать аватар">×</button>
+            <button class="host-bubble-file" id="hostBubbleFile" type="button" aria-label="Вставить видео ведущего">видео</button>
+            <button class="host-bubble-size" id="hostBubbleSize" type="button" aria-label="Потяните, чтобы изменить размер" title="Потяните, чтобы изменить размер">↘</button>
+          </div>
+          <input id="hostVideoFile" type="file" accept="video/*" hidden>
         </div>
       </div>
       <div class="dock" id="dock"></div>
       <footer class="stage-foot">
-        <button class="save-btn" id="saveScene" type="button">Сохранить</button>
+        <button class="save-btn btn btn-primary" id="saveScene" type="button">Сохранить</button>
+        <button class="host-toggle is-on" id="hostBubbleToggle" type="button">Аватар</button>
         <span class="live-pill" id="liveLine">На экране</span>
         <span class="demo-pill" id="demoPill">Демо</span>
       </footer>
@@ -62,6 +90,6 @@
   <div class="modal-back" id="modalBack" hidden><div class="modal" id="modal"></div></div>
   <div class="tour" id="tour" hidden></div>
   <div class="toast" id="toast" hidden></div>
-  <script src="/js/console.js"></script>
+  <script src="/js/console.js?v=avatar2"></script>
 </body>
 </html>
