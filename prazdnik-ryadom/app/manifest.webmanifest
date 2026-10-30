@@ -1,0 +1,11 @@
+{
+  "name": "Праздник Рядом — суфлёр",
+  "short_name": "Суфлёр",
+  "description": "Пошаговый помощник ведущего: что говорить, что делать, что если.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#12100e",
+  "theme_color": "#12100e",
+  "lang": "ru"
+}

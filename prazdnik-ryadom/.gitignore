@@ -1,0 +1,22 @@
+# Секреты и локальные настройки
+.env
+.env.local
+*.pem
+*.key
+
+# Локальные настройки Claude Code
+.claude/settings.local.json
+
+# Системные
+.DS_Store
+Thumbs.db
+
+# Редакторы
+.idea/
+*.swp
+
+# Логи
+*.log
+
+# Медиа с выездов (видео/фото большие — хранить вне git)
+playbook/media/

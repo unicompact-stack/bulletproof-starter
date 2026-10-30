@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#12100e">
+<title>Праздник Рядом — суфлёр</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Суфлёр">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <button class="iconbtn" id="btnMenu" aria-label="Меню">☰</button>
+    <div class="name" id="scName">—</div>
+    <div class="right">
+      <div class="clock" id="clock">--:--</div>
+      <div class="cake" id="cake">торт: —</div>
+    </div>
+  </header>
+
+  <div class="progress" id="progress"></div>
+
+  <main class="stage" id="stage">
+    <div class="blockhead">
+      <span class="time" id="bTime">15:00</span>
+      <h1 id="bTitle">Выход и правила</h1>
+      <span class="dur" id="bDur">3 мин</span>
+    </div>
+
+    <section class="panel say">
+      <h2>Говорю</h2>
+      <div id="bSay"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Делаю</h2>
+      <ul class="todo" id="bTodo"></ul>
+    </section>
+
+    <div class="meta" id="bMeta"></div>
+    <div class="avoid" id="bAvoid"></div>
+    <div class="next" id="bNext"></div>
+  </main>
+
+  <div class="dock">
+    <div class="row quick">
+      <button class="btn warn grow" id="btnSit">🚨 Что случилось?</button>
+      <button class="btn grow" id="btnGames">🎲 Игры</button>
+    </div>
+    <div class="timerbar">
+      <div class="left" id="remain">3:00</div>
+      <div class="track"><div class="fill" id="fill" style="width:100%"></div></div>
+      <button class="mini" id="minus" aria-label="минус минута">−</button>
+      <button class="mini" id="plus" aria-label="плюс минута">+</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="prev" aria-label="назад">←</button>
+      <button class="btn primary grow" id="next">Дальше <small id="nextLabel"></small></button>
+      <button class="btn" id="btnPrompter">Суфлёр</button>
+    </div>
+  </div>
+</div>
+
+<section class="sheet" id="sheetSit">
+  <div class="head">
+    <h2>Что случилось?</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body"><div class="grid" id="sitGrid"></div></div>
+</section>
+
+<section class="sheet" id="sheetSitOne">
+  <div class="head">
+    <button class="iconbtn" data-close>←</button>
+    <h2 id="sitTitle">—</h2>
+  </div>
+  <div class="body" id="sitBody"></div>
+  <div class="foot">
+    <button class="btn grow primary" id="sitBack">Понятно</button>
+    <button class="btn" id="sitGoto" style="display:none">К блоку</button>
+  </div>
+</section>
+
+<section class="sheet" id="sheetGames">
+  <div class="head">
+    <h2>Игры</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body">
+    <input class="search" id="gSearch" placeholder="Поиск: квиз, мафия, гитара…" inputmode="search">
+    <div class="chips" id="gChips"></div>
+    <div class="grid" id="gGrid"></div>
+  </div>
+</section>
+
+<section class="sheet" id="sheetGameOne">
+  <div class="head">
+    <button class="iconbtn" data-close>←</button>
+    <h2 id="gameTitle">—</h2>
+  </div>
+  <div class="body" id="gameBody"></div>
+  <div class="foot"><button class="btn grow primary" data-close>Понятно</button></div>
+</section>
+
+<section class="sheet" id="sheetMenu">
+  <div class="head">
+    <h2>Меню</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body">
+    <div class="grid">
+      <button class="card" data-open="scenarios"><div class="t">🎬 Сценарии</div><div class="s">Дима 10 · младший · старший</div></button>
+      <button class="card" data-open="phrases"><div class="t">💬 Фразы</div><div class="s">открытие, переходы, финал</div></button>
+      <button class="card" data-open="checklist"><div class="t">✅ Чек-лист выезда</div><div class="s">за день, сборы, на месте, после</div></button>
+      <button class="card" data-open="settings"><div class="t">⚙️ Настройки</div><div class="s">шрифт, тема, торт, начало</div></button>
+    </div>
+    <p style="color:var(--muted); font-size:13px; margin-top:18px">
+      Данные хранятся на устройстве. Интернет не нужен: после первого открытия всё работает офлайн.
+    </p>
+  </div>
+</section>
+
+<section class="sheet" id="sheetPhrases">
+  <div class="head"><h2>Фразы</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body" id="phraseBody"></div>
+</section>
+
+<section class="sheet" id="sheetChecklist">
+  <div class="head"><h2>Чек-лист выезда</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body" id="checkBody"></div>
+</section>
+
+<section class="sheet" id="sheetScenarios">
+  <div class="head"><h2>Сценарии</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body"><div class="grid" id="scGrid"></div></div>
+</section>
+
+<section class="sheet" id="sheetSettings">
+  <div class="head"><h2>Настройки</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body">
+    <h3 class="group">Шрифт</h3>
+    <div class="chips">
+      <button class="chip" data-fs="0.9">Мелкий</button>
+      <button class="chip" data-fs="1">Обычный</button>
+      <button class="chip" data-fs="1.15">Крупный</button>
+      <button class="chip" data-fs="1.3">Очень крупный</button>
+    </div>
+    <h3 class="group">Тема</h3>
+    <div class="chips">
+      <button class="chip" data-theme="dark">Тёмная</button>
+      <button class="chip" data-theme="light">Светлая</button>
+    </div>
+    <h3 class="group">Праздник</h3>
+    <div class="card">
+      <label class="s">Начало (ЧЧ:ММ)</label>
+      <input class="search" id="inpStart" inputmode="numeric" placeholder="15:00" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Торт (ЧЧ:ММ)</label>
+      <input class="search" id="inpCake" inputmode="numeric" placeholder="16:00" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Имя именинника</label>
+      <input class="search" id="inpKids" placeholder="Дима" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Ваше имя (ведущий)</label>
+      <input class="search" id="inpHost" placeholder="как вас зовут" style="margin:6px 0 0">
+    </div>
+    <div class="chips" style="margin-top:14px">
+      <button class="chip" id="btnRestart">Начать с начала</button>
+      <button class="chip" id="btnResetAll">Сбросить всё</button>
+    </div>
+  </div>
+</section>
+
+<div class="prompter" id="prompter">
+  <div class="ptop">
+    <span id="pClock">--:--</span>
+    <span id="pTitle">—</span>
+    <span class="dots" id="pDots"></span>
+  </div>
+  <div class="ptext" id="pText"><p>—</p></div>
+  <div class="pbot">
+    <button id="pPrev">←</button>
+    <button id="pNext">Дальше →</button>
+    <button id="pClose">Выйти</button>
+    <span style="margin-left:auto; font-size:12px" id="pHint">тап по экрану</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="boot-error" id="bootError" hidden></div>
+<script>
+  window.addEventListener('error', function (e) {
+    var b = document.getElementById('bootError');
+    if (b) { b.hidden = false; b.textContent = 'Сбой: ' + (e.message || 'ошибка загрузки'); }
+  });
+  setTimeout(function () {
+    if (!window.__appReady) {
+      var b = document.getElementById('bootError');
+      if (b) { b.hidden = false; b.textContent = 'Приложение не запустилось. Обновите страницу.'; }
+    }
+  }, 3000);
+</script>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

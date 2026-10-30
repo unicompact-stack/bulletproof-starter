@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#12100e">
+<title>Праздник Рядом — суфлёр</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Суфлёр">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<style>
+:root{
+  --bg:#12100e; --bg2:#1b1815; --card:#221e1a; --line:#3a332c;
+  --text:#f6efe6; --muted:#b6a898; --accent:#ff8a2b; --accent2:#ffd166;
+  --ok:#5ac07a; --warn:#ffb84d; --bad:#ff6b5e;
+  --fs:1; --radius:18px; --tap:56px;
+}
+html[data-theme="light"]{
+  --bg:#fbf7f1; --bg2:#f2ebe1; --card:#ffffff; --line:#e0d5c6;
+  --text:#241e18; --muted:#7a6b5c;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:calc(16px * var(--fs)); line-height:1.45;
+  overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+}
+input,textarea{-webkit-user-select:text; user-select:text}
+button{font-family:inherit; font-size:inherit; color:inherit; border:0; background:none; cursor:pointer}
+.app{min-height:100dvh; display:flex; flex-direction:column; max-width:1200px; margin:0 auto; padding:0}
+
+/* ── Шапка ───────────────────────────────────────────── */
+.top{display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--bg2); position:sticky; top:0; z-index:20}
+.top .name{font-weight:700; font-size:calc(15px*var(--fs)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.top .right{margin-left:auto; text-align:right}
+.top .clock{font-variant-numeric:tabular-nums; font-weight:700; font-size:calc(17px*var(--fs))}
+.top .cake{font-size:calc(12px*var(--fs)); color:var(--muted)}
+.top .cake.soon{color:var(--warn); font-weight:700}
+.iconbtn{min-height:44px; min-width:44px; border-radius:12px; display:grid; place-items:center; font-size:calc(18px*var(--fs)); background:var(--card); border:1px solid var(--line)}
+.iconbtn:active{transform:scale(.96)}
+
+/* ── Прогресс ─────────────────────────────────────────── */
+.progress{display:flex; gap:4px; padding:10px 16px 0}
+.progress .seg{cursor:pointer; flex:1; height:10px; border-radius:6px; background:var(--line); overflow:hidden; position:relative}
+.progress .seg.done{background:var(--accent)}
+.progress .seg.now{background:var(--accent2)}
+.progress .seg span{position:absolute; inset:0; display:block}
+
+/* ── Карточка блока ──────────────────────────────────── */
+.stage{flex:1; display:flex; flex-direction:column; gap:12px; padding:12px 16px 215px}
+.blockhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.blockhead .time{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:800; font-size:calc(15px*var(--fs))}
+.blockhead h1{margin:0; font-size:calc(26px*var(--fs)); line-height:1.15; letter-spacing:-.01em}
+.blockhead .dur{color:var(--muted); font-size:calc(13px*var(--fs))}
+
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
+.panel h2{margin:0 0 8px; font-size:calc(12px*var(--fs)); letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700}
+.say{background:linear-gradient(180deg,rgba(255,138,43,.10),rgba(255,138,43,.04)); border-color:rgba(255,138,43,.45)}
+.say p{margin:0 0 12px; font-size:calc(24px*var(--fs)); line-height:1.35; font-weight:600}
+.say p:last-child{margin-bottom:0}
+.say p.q{color:var(--accent2)}
+.todo{margin:0; padding:0; list-style:none}
+.todo li{display:flex; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line); font-size:calc(17px*var(--fs)); align-items:flex-start}
+.todo li:last-child{border-bottom:0}
+.todo li b{flex:0 0 auto; width:22px; height:22px; border-radius:7px; border:2px solid var(--line); margin-top:2px; display:grid; place-items:center; font-size:12px}
+.todo li.done{color:var(--muted); text-decoration:line-through}
+.todo li.done b{background:var(--ok); border-color:var(--ok); color:#0d1a10}
+.avoid{color:var(--muted); font-size:calc(15px*var(--fs))}
+.avoid b{color:var(--bad)}
+.meta{display:flex; gap:10px; flex-wrap:wrap; color:var(--muted); font-size:calc(13px*var(--fs))}
+.meta span{background:var(--bg2); border:1px solid var(--line); border-radius:999px; padding:5px 10px}
+.next{color:var(--muted); font-size:calc(14px*var(--fs)); padding:0 4px}
+.next b{color:var(--text)}
+
+/* ── Нижняя панель ───────────────────────────────────── */
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:30; background:linear-gradient(180deg,rgba(0,0,0,0),var(--bg) 30%); padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.dock .row{max-width:1200px; margin:0 auto; display:flex; gap:10px}
+.dock .row.quick{margin-bottom:8px}
+.dock .row.quick .btn{min-height:60px}
+.btn{min-height:var(--tap); border-radius:16px; padding:0 18px; font-size:calc(17px*var(--fs)); font-weight:700; background:var(--card); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; gap:8px}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent); color:#20140a; border-color:var(--accent)}
+.btn.warn{background:var(--bad); color:#2a0a07; border-color:var(--bad)}
+.btn.ghost{background:transparent}
+.btn.grow{flex:1}
+.btn small{font-weight:600; opacity:.75; font-size:calc(12px*var(--fs))}
+.timerbar{max-width:1200px; margin:0 auto 8px; display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums}
+.timerbar .left{font-weight:800; font-size:calc(20px*var(--fs))}
+.timerbar .track{flex:1; height:8px; border-radius:5px; background:var(--line); overflow:hidden}
+.timerbar .fill{height:100%; background:var(--accent); width:50%}
+.timerbar .fill.low{background:var(--bad)}
+.timerbar .mini{min-height:36px; min-width:44px; border-radius:10px; background:var(--card); border:1px solid var(--line); font-weight:700}
+
+/* ── Оверлеи ─────────────────────────────────────────── */
+.sheet{position:fixed; inset:0; z-index:50; background:var(--bg); display:none; flex-direction:column}
+.sheet.open{display:flex}
+.sheet .head{display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); background:var(--bg2); position:sticky; top:0}
+.sheet .head h2{margin:0; font-size:calc(20px*var(--fs))}
+.sheet .body{flex:1; overflow:auto; padding:14px 16px 40px; -webkit-overflow-scrolling:touch}
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:left; min-height:92px; display:flex; flex-direction:column; gap:6px}
+.card:active{transform:scale(.99)}
+.card .t{font-weight:700; font-size:calc(16px*var(--fs)); display:flex; gap:8px; align-items:flex-start}
+.card .s{color:var(--muted); font-size:calc(13px*var(--fs))}
+.chips{display:flex; gap:8px; overflow:auto; padding-bottom:10px; margin-bottom:6px}
+.chip{white-space:nowrap; min-height:40px; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); font-size:calc(14px*var(--fs))}
+.chip.on{background:var(--accent); color:#20140a; border-color:var(--accent); font-weight:700}
+.search{width:100%; min-height:48px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--text); padding:0 14px; font-size:calc(16px*var(--fs)); margin-bottom:12px}
+.phrase{background:linear-gradient(180deg,rgba(255,138,43,.10),transparent); border:1px solid rgba(255,138,43,.4); border-radius:14px; padding:14px; margin-bottom:12px}
+.phrase h3{margin:0 0 6px; font-size:calc(13px*var(--fs)); text-transform:uppercase; letter-spacing:.12em; color:var(--accent2)}
+.phrase p{margin:0; font-size:calc(19px*var(--fs)); line-height:1.4}
+.big-action{font-size:calc(19px*var(--fs)); line-height:1.5}
+.big-action li{margin-bottom:10px}
+.sheet .foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); display:flex; gap:10px; background:var(--bg2)}
+.check{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); font-size:calc(17px*var(--fs))}
+.check b{width:24px; height:24px; border-radius:8px; border:2px solid var(--line); flex:0 0 auto; display:grid; place-items:center; font-size:12px; margin-top:1px}
+.check.on{color:var(--muted); text-decoration:line-through}
+.check.on b{background:var(--ok); border-color:var(--ok); color:#0d1a10}
+.changebox{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:12px; display:flex; gap:10px; align-items:flex-start}
+.changebox b{flex:0 0 auto; color:var(--warn); font-size:calc(12px*var(--fs)); text-transform:uppercase; letter-spacing:.1em; margin-top:3px}
+.changebox span{font-size:calc(16px*var(--fs))}
+h3.group{margin:18px 0 6px; font-size:calc(13px*var(--fs)); letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+
+/* ── Режим суфлёра ───────────────────────────────────── */
+.prompter{position:fixed; inset:0; z-index:60; background:#000; color:#fff; display:none; flex-direction:column; padding:24px; -webkit-user-select:none; user-select:none}
+.prompter.open{display:flex}
+.prompter .ptop{display:flex; gap:12px; align-items:center; color:#8d8d8d; font-size:14px; font-variant-numeric:tabular-nums}
+.prompter .ptext{flex:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px}
+.prompter .ptext p{margin:0; font-size:clamp(30px,5.6vw,64px); line-height:1.25; font-weight:700}
+.prompter .pbot{display:flex; gap:12px; align-items:center; color:#8d8d8d; font-size:14px}
+.prompter .dots{display:flex; gap:6px; margin-left:auto}
+.prompter .dots i{width:8px; height:8px; border-radius:50%; background:#3a3a3a}
+.prompter .dots i.on{background:var(--accent)}
+.prompter button{color:#fff; background:#1b1b1b; border:1px solid #333; border-radius:14px; min-height:52px; padding:0 20px; font-weight:700}
+
+/* ── Мелочи ──────────────────────────────────────────── */
+.empty{color:var(--muted); padding:30px 0; text-align:center}
+.boot-error{position:fixed; left:12px; right:12px; top:12px; z-index:99; background:#7a1f18; color:#fff; padding:12px 14px; border-radius:12px; font-size:14px; line-height:1.35}
+.toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%); background:#000c; color:#fff; padding:12px 18px; border-radius:12px; z-index:80; font-size:15px; opacity:0; transition:opacity .2s; pointer-events:none}
+.toast.on{opacity:1}
+@media (max-width:420px){
+  .top .name{font-size:calc(13px*var(--fs))}
+  .dock .row.quick .btn{min-height:54px; font-size:calc(15px*var(--fs))}
+}
+@media (max-width:640px){
+  .blockhead h1{font-size:calc(22px*var(--fs))}
+  .say p{font-size:calc(21px*var(--fs))}
+  .dock .row{gap:8px}
+  .btn{padding:0 12px}
+}
+@media (min-width:900px){
+  .stage{padding-bottom:245px}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <button class="iconbtn" id="btnMenu" aria-label="Меню">☰</button>
+    <div class="name" id="scName">—</div>
+    <div class="right">
+      <div class="clock" id="clock">--:--</div>
+      <div class="cake" id="cake">торт: —</div>
+    </div>
+  </header>
+
+  <div class="progress" id="progress"></div>
+
+  <main class="stage" id="stage">
+    <div class="blockhead">
+      <span class="time" id="bTime">15:00</span>
+      <h1 id="bTitle">Выход и правила</h1>
+      <span class="dur" id="bDur">3 мин</span>
+    </div>
+
+    <section class="panel say">
+      <h2>Говорю</h2>
+      <div id="bSay"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Делаю</h2>
+      <ul class="todo" id="bTodo"></ul>
+    </section>
+
+    <div class="meta" id="bMeta"></div>
+    <div class="avoid" id="bAvoid"></div>
+    <div class="next" id="bNext"></div>
+  </main>
+
+  <div class="dock">
+    <div class="row quick">
+      <button class="btn warn grow" id="btnSit">🚨 Что случилось?</button>
+      <button class="btn grow" id="btnGames">🎲 Игры</button>
+    </div>
+    <div class="timerbar">
+      <div class="left" id="remain">3:00</div>
+      <div class="track"><div class="fill" id="fill" style="width:100%"></div></div>
+      <button class="mini" id="minus" aria-label="минус минута">−</button>
+      <button class="mini" id="plus" aria-label="плюс минута">+</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="prev" aria-label="назад">←</button>
+      <button class="btn primary grow" id="next">Дальше <small id="nextLabel"></small></button>
+      <button class="btn" id="btnPrompter">Суфлёр</button>
+    </div>
+  </div>
+</div>
+
+<section class="sheet" id="sheetSit">
+  <div class="head">
+    <h2>Что случилось?</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body"><div class="grid" id="sitGrid"></div></div>
+</section>
+
+<section class="sheet" id="sheetSitOne">
+  <div class="head">
+    <button class="iconbtn" data-close>←</button>
+    <h2 id="sitTitle">—</h2>
+  </div>
+  <div class="body" id="sitBody"></div>
+  <div class="foot">
+    <button class="btn grow primary" id="sitBack">Понятно</button>
+    <button class="btn" id="sitGoto" style="display:none">К блоку</button>
+  </div>
+</section>
+
+<section class="sheet" id="sheetGames">
+  <div class="head">
+    <h2>Игры</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body">
+    <input class="search" id="gSearch" placeholder="Поиск: квиз, мафия, гитара…" inputmode="search">
+    <div class="chips" id="gChips"></div>
+    <div class="grid" id="gGrid"></div>
+  </div>
+</section>
+
+<section class="sheet" id="sheetGameOne">
+  <div class="head">
+    <button class="iconbtn" data-close>←</button>
+    <h2 id="gameTitle">—</h2>
+  </div>
+  <div class="body" id="gameBody"></div>
+  <div class="foot"><button class="btn grow primary" data-close>Понятно</button></div>
+</section>
+
+<section class="sheet" id="sheetMenu">
+  <div class="head">
+    <h2>Меню</h2>
+    <button class="iconbtn" style="margin-left:auto" data-close>✕</button>
+  </div>
+  <div class="body">
+    <div class="grid">
+      <button class="card" data-open="scenarios"><div class="t">🎬 Сценарии</div><div class="s">Дима 10 · младший · старший</div></button>
+      <button class="card" data-open="phrases"><div class="t">💬 Фразы</div><div class="s">открытие, переходы, финал</div></button>
+      <button class="card" data-open="checklist"><div class="t">✅ Чек-лист выезда</div><div class="s">за день, сборы, на месте, после</div></button>
+      <button class="card" data-open="settings"><div class="t">⚙️ Настройки</div><div class="s">шрифт, тема, торт, начало</div></button>
+    </div>
+    <p style="color:var(--muted); font-size:13px; margin-top:18px">
+      Данные хранятся на устройстве. Интернет не нужен: после первого открытия всё работает офлайн.
+    </p>
+  </div>
+</section>
+
+<section class="sheet" id="sheetPhrases">
+  <div class="head"><h2>Фразы</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body" id="phraseBody"></div>
+</section>
+
+<section class="sheet" id="sheetChecklist">
+  <div class="head"><h2>Чек-лист выезда</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body" id="checkBody"></div>
+</section>
+
+<section class="sheet" id="sheetScenarios">
+  <div class="head"><h2>Сценарии</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body"><div class="grid" id="scGrid"></div></div>
+</section>
+
+<section class="sheet" id="sheetSettings">
+  <div class="head"><h2>Настройки</h2><button class="iconbtn" style="margin-left:auto" data-close>✕</button></div>
+  <div class="body">
+    <h3 class="group">Шрифт</h3>
+    <div class="chips">
+      <button class="chip" data-fs="0.9">Мелкий</button>
+      <button class="chip" data-fs="1">Обычный</button>
+      <button class="chip" data-fs="1.15">Крупный</button>
+      <button class="chip" data-fs="1.3">Очень крупный</button>
+    </div>
+    <h3 class="group">Тема</h3>
+    <div class="chips">
+      <button class="chip" data-theme="dark">Тёмная</button>
+      <button class="chip" data-theme="light">Светлая</button>
+    </div>
+    <h3 class="group">Праздник</h3>
+    <div class="card">
+      <label class="s">Начало (ЧЧ:ММ)</label>
+      <input class="search" id="inpStart" inputmode="numeric" placeholder="15:00" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Торт (ЧЧ:ММ)</label>
+      <input class="search" id="inpCake" inputmode="numeric" placeholder="16:00" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Имя именинника</label>
+      <input class="search" id="inpKids" placeholder="Дима" style="margin:6px 0 0">
+      <label class="s" style="margin-top:10px; display:block">Ваше имя (ведущий)</label>
+      <input class="search" id="inpHost" placeholder="как вас зовут" style="margin:6px 0 0">
+    </div>
+    <div class="chips" style="margin-top:14px">
+      <button class="chip" id="btnRestart">Начать с начала</button>
+      <button class="chip" id="btnResetAll">Сбросить всё</button>
+    </div>
+  </div>
+</section>
+
+<div class="prompter" id="prompter">
+  <div class="ptop">
+    <span id="pClock">--:--</span>
+    <span id="pTitle">—</span>
+    <span class="dots" id="pDots"></span>
+  </div>
+  <div class="ptext" id="pText"><p>—</p></div>
+  <div class="pbot">
+    <button id="pPrev">←</button>
+    <button id="pNext">Дальше →</button>
+    <button id="pClose">Выйти</button>
+    <span style="margin-left:auto; font-size:12px" id="pHint">тап по экрану</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="boot-error" id="bootError" hidden></div>
+<script>
+  window.addEventListener('error', function (e) {
+    var b = document.getElementById('bootError');
+    if (b) { b.hidden = false; b.textContent = 'Сбой: ' + (e.message || 'ошибка загрузки'); }
+  });
+  setTimeout(function () {
+    if (!window.__appReady) {
+      var b = document.getElementById('bootError');
+      if (b) { b.hidden = false; b.textContent = 'Приложение не запустилось. Обновите страницу.'; }
+    }
+  }, 3000);
+</script>
+
+<script>
+/* Данные приложения «Праздник Рядом — суфлёр».
+   Всё автономно: нет интернета, нет API. Правится руками прямо здесь. */
+
+const SCENARIOS = [
+  {
+    id: 'dima10',
+    title: 'Дима, 10 лет',
+    subtitle: 'Пакет «Стандарт» · Праздник-квиз · 90 мин · 10 детей · квартира',
+    defaults: { start: '15:00', cake: '16:00', kids: '10', age: '10' },
+    blocks: [
+      {
+        id: 'start', dur: 3, title: 'Выход и правила', icon: '🎤', game: '',
+        music: 'Плейлист «Вход», 30 %, через 30 секунд выключить',
+        say: [
+          'Привет! Меня зовут [имя], я веду праздники.',
+          'Следующие полтора часа я отвечаю за то, чтобы скучно не было никому — ни имениннику, ни вам.',
+          'Три правила: играем вместе, не обижаем друг друга, ничего не ломаем в квартире.',
+          'Всё, поехали!'
+        ],
+        todo: [
+          'Встать у стены, чтобы видеть всех',
+          'Включить микрофон даже дома — дети собираются на звук',
+          'Первая игра через 60 секунд, не позже'
+        ],
+        avoid: 'Не представляться «ведущим», не спрашивать «кто хочет начать?».'
+      , role: 'start'},
+      {
+        id: 'names', dur: 7, title: 'Знакомство: «Имя и движение»', icon: '🙋', game: '№1',
+        music: 'Тихо, без музыки — нужны голоса',
+        say: [
+          'Меня зовут [имя], вот так! (прыжок с хлопком)',
+          'Теперь ты: имя и движение. Все повторяем хором!',
+          'Второй круг: чьё это движение?'
+        ],
+        todo: [
+          'Взять мяч, встать в круг',
+          'Повторяют хором, не по одному — так никто не стесняется',
+          'Запомнить 8 имён из 10 — их звать по имени весь праздник'
+        ],
+        avoid: 'Не заставлять стеснительного показывать движение первым.'
+      , role: 'names'},
+      {
+        id: 'teams', dur: 5, title: 'Деление на команды: «Молекулы»', icon: '🧩', game: '№4',
+        music: '«Движение», 40 %',
+        say: [
+          'Вы атомы! Ходим по комнате, никого не толкаем... Молекула по три!',
+          'Молекула по пять!',
+          'Теперь у нас две команды. Придумайте название за 30 секунд. Время пошло!'
+        ],
+        todo: [
+          'Последнее число подобрать так, чтобы вышло две ровные команды',
+          'Названия команд написать на ватмане',
+          'Там же — колонки для очков, счёт всегда на виду'
+        ],
+        avoid: 'Не давать выбирать капитанов голосованием — это конфликт. Капитан = тот, кто уже командует.'
+      , role: 'teams'},
+      {
+        id: 'word', dur: 15, title: 'Эстафета «Собери слово»', icon: '🔤', game: '№7',
+        music: '«Движение», 40 %',
+        say: [
+          'В комнате спрятаны 14 карточек с буквами.',
+          'Ваша задача — найти их и собрать слово из 8 букв. Лишние 6 — ловушка.',
+          'Кто собрал — руки вверх и кричит «готово». Начали!'
+        ],
+        todo: [
+          'Стоять у стены, подсказывать «горячо / холодно»',
+          'Самому не искать и не подавать карточки',
+          'Проверить вслух, объявить счёт: победителю 3 очка, второй команде 1'
+        ],
+        avoid: 'Не ждать дольше 10 минут: если не находят — дать подсказку-карту комнаты.'
+      , role: 'word'},
+      {
+        id: 'water', dur: 5, title: 'Пауза и вода', icon: '💧', game: '',
+        music: 'Тише, фоном',
+        say: [
+          'Стоп, отдышались. Кто чем занимается кроме школы?',
+          '[ребёнок], а ты что любишь больше всего?'
+        ],
+        todo: [
+          'Раздать стаканчики и воду (свои, из сумки)',
+          'Сесть вместе со всеми в круг',
+          'Проверить карточки квиза на следующий блок'
+        ],
+        avoid: 'Не превращать паузу в ещё один конкурс. Это отдых и для детей, и для вас.'
+      , role: 'water'},
+      {
+        id: 'quiz', dur: 15, title: 'Квиз: 2 раунда по 6 вопросов', icon: '❓', game: '№15',
+        music: '«Квиз», тихо',
+        say: [
+          'Раунд первый, разминка. Шесть вопросов, на каждый 20 секунд.',
+          'За правильный ответ — очко, за смешной — пол-очка. Поехали.',
+          'Счёт: [X] : [Y]. Но это ещё ничего не значит, впереди дартс.'
+        ],
+        todo: [
+          'Команды за столом, у каждой лист и ручка',
+          'Считать 20 секунд вслух, потом «ответ!»',
+          'Счёт объявлять после каждого раунда и писать на ватмане',
+          'Если команда в нуле — перед 2-м раундом объявить «догоняющий»: очко стоит два'
+        ],
+        avoid: 'Не задавать вопросы «на взрослую эрудицию». Должно быть можно догадаться.'
+      , role: 'quiz'},
+      {
+        id: 'darts', dur: 5, title: 'Механическая игра: дартс на липучках', icon: '🎯', game: '',
+        music: '«Движение», 40 %',
+        say: [
+          'Три броска от команды.',
+          'Центр — 3, средний круг — 2, край — 1, мимо — ноль.',
+          'Бросаем по одному, остальные болеют с дивана, к линии не подходим.'
+        ],
+        todo: [
+          'Повесить на дверь, линия броска 2 метра — отметить лентой',
+          'Очки писать в общий счёт',
+          'Если толпятся — остановить и повторить правило вслух'
+        ],
+        avoid: 'Не разрешать бросать одновременно — это единственный способ что-то разбить.'
+      , role: 'active'},
+      {
+        id: 'cake', dur: 15, title: 'Еда и торт', icon: '🎂', game: '',
+        music: 'Спокойное, 30 %',
+        say: [
+          'Пятнадцать минут — ваши. Ешьте.',
+          'В 16:00 торт и поздравление, потом гитара.'
+        ],
+        todo: [
+          'Убрать реквизит в сторону, чтобы не залили',
+          'Помочь маме, поесть самому',
+          'Дать семье поздравить, помочь с фото: «все сюда, смотрим в камеру»'
+        ],
+        avoid: 'Не перехватывать момент с тортом и не проводить игры за столом.'
+      , role: 'cake'},
+      {
+        id: 'guitar', dur: 12, title: 'Гитара: угадай мелодию + песня', icon: '🎸', game: '№25, №26',
+        music: 'Гитара вживую, микрофон не нужен',
+        say: [
+          'Теперь я играю, а вы угадываете. Шесть мелодий, кто первый — тот кричит ответ.',
+          'За правильный ответ команде очко, за исполнение хором — ещё одно.',
+          'А теперь каждая команда за 5 минут придумает песню про именинника. Вот шаблон.'
+        ],
+        todo: [
+          'Сесть на стул, гитару держать удобно',
+          'Играть по 10–15 секунд: «Кузнечик», «Пусть бегут неуклюже», «Голубой вагон», «Чунга-Чанга», «Мамонтёнок», «Облака»',
+          'Песня: мотив «В траве сидел кузнечик», поют команды по очереди',
+          'Самому не петь — играть и подпевать тихо, чтобы вести'
+        ],
+        avoid: 'Не устраивать «а теперь соло именинника». Поют все.'
+      , role: 'guitar'},
+      {
+        id: 'auction', dur: 6, title: 'Аукцион призов', icon: '🏆', game: '№32',
+        music: 'Фоном, бодро',
+        say: [
+          'Финальный счёт: [X] : [Y]. Теперь тратим очки.',
+          'Наклейки — 1 очко, значок — 2, брелок — 3, магнит — 1.',
+          'Покупаем по очереди, начинает победившая команда.'
+        ],
+        todo: [
+          'Выложить призы на стол рядами',
+          'Каждому ребёнку — минимум один приз',
+          'Если очков не хватает — объявить «бонус за участие: по одному очку»'
+        ],
+        avoid: 'Не оставлять никого без приза — обиженный ребёнок запоминается родителям надолго.'
+      , role: 'auction'},
+      {
+        id: 'final', dur: 4, title: 'Похвала и фото', icon: '📸', game: '№30',
+        music: 'Тёплое, 40 %',
+        say: [
+          'Последнее: каждый говорит одно — каким был этот праздник. Начинаю я.',
+          '[ребёнок], с днём рождения! Теперь все сюда, фото!'
+        ],
+        todo: [
+          'Фото пока все вместе, не после того как разойдутся',
+          'Сказать спасибо родителям',
+          'Собрать реквизит, проверить карточки и призы',
+          'Спросить маму: «что понравилось, что нет?» — честно'
+        ],
+        avoid: 'Не затягивать финал: 4 минуты, и всё.'
+      , role: 'final'}
+    ]
+  },
+  {
+    id: 'junior',
+    title: 'Младший 8–11',
+    subtitle: 'Универсальный · 90 мин · 6–12 детей · дом, кафе, двор',
+    defaults: { start: '15:00', cake: '', kids: '10', age: '9' },
+    blocks: [
+      { id: 'j1', dur: 3, title: 'Выход и три правила', icon: '🎤', game: '', music: '«Вход», 30 %',
+        say: ['Привет! Меня зовут [имя], следующие полтора часа я отвечаю за то, чтобы вам не было скучно.', 'Три правила: играем вместе, не обижаем друг друга, ничего не ломаем. Поехали!'],
+        todo: ['Встать так, чтобы видеть всех', 'Микрофон включить даже дома'], avoid: 'Никаких длинных представлений.' , role: 'start'},
+      { id: 'j2', dur: 7, title: 'Имя и движение', icon: '🙋', game: '№1', music: 'Без музыки',
+        say: ['Меня зовут [имя], вот так! Теперь ты: имя и движение. Все повторяем хором!'],
+        todo: ['Круг с мячом', 'Второй круг: угадать, чьё движение'], avoid: 'Не по одному — только хором.' , role: 'names'},
+      { id: 'j3', dur: 5, title: 'Молекулы → команды', icon: '🧩', game: '№4', music: '«Движение», 40 %',
+        say: ['Вы атомы, ходим по комнате... Молекула по три!', 'Молекула по пять!', 'Название команды за 30 секунд!'],
+        todo: ['Последнее число — под две ровные команды', 'Названия и счёт на ватман'], avoid: 'Капитанов не выбирать голосованием.' , role: 'teams'},
+      { id: 'j4', dur: 15, title: 'Собери слово', icon: '🔤', game: '№7', music: '«Движение», 40 %',
+        say: ['В комнате спрятаны карточки с буквами. Соберите слово из 8 букв. Кто готов — руки вверх!'],
+        todo: ['Подсказывать «горячо/холодно»', 'Победителю 3 очка, вторым 1'], avoid: 'Не искать вместо детей.' , role: 'word'},
+      { id: 'j5', dur: 5, title: 'Пауза и вода', icon: '💧', game: '', music: 'Тише',
+        say: ['Стоп, отдышались. Кто чем занимается кроме школы?'],
+        todo: ['Вода', 'Проверить следующий блок'], avoid: 'Не занимать паузу играми.' , role: 'water'},
+      { id: 'j6', dur: 15, title: 'Квиз 2 раунда', icon: '❓', game: '№15', music: '«Квиз», тихо',
+        say: ['Шесть вопросов, 20 секунд на каждый. За правильный — очко, за смешной — пол-очка.'],
+        todo: ['Вопросы, где можно догадаться', 'Счёт вслух после раунда'], avoid: 'Не «на эрудицию взрослых».' , role: 'quiz'},
+      { id: 'j7', dur: 5, title: 'Разрядка: дартс или Доббль', icon: '🎯', game: '', music: '«Движение»',
+        say: ['Три броска от команды. Центр — 3, круг — 2, край — 1.'],
+        todo: ['Если есть настолки — Доббль/Свинтус вместо дартса', 'Болеем с дивана'], avoid: 'Не толпиться у мишени.' , role: 'active'},
+      { id: 'j8', dur: 15, title: 'Еда и торт', icon: '🎂', game: '', music: 'Спокойное',
+        say: ['Пятнадцать минут ваши. Ешьте.', 'Торт — по сигналу родителей.'],
+        todo: ['Убрать реквизит', 'Помочь с фото'], avoid: 'Никаких игр за столом.' , role: 'cake'},
+      { id: 'j9', dur: 12, title: 'Гитара', icon: '🎸', game: '№25, №26', music: 'Гитара вживую',
+        say: ['Играю — вы угадываете. За ответ очко, за хор ещё одно.', 'Теперь песня про именинника: вот шаблон, 5 минут.'],
+        todo: ['6 мелодий', 'Поют команды по очереди'], avoid: 'Не петь самому.' , role: 'guitar'},
+      { id: 'j10', dur: 6, title: 'Аукцион призов', icon: '🏆', game: '№32', music: 'Бодро',
+        say: ['Счёт [X] : [Y]. Тратим очки: наклейки 1, значок 2, брелок 3.'],
+        todo: ['Приз каждому', 'Бонус за участие, если не хватает очков'], avoid: 'Никого без приза.' , role: 'auction'},
+      { id: 'j11', dur: 4, title: 'Похвала и фото', icon: '📸', game: '№30', music: 'Тёплое',
+        say: ['Каждый одним словом: каким был праздник?', 'Все сюда, фото!'],
+        todo: ['Фото пока все вместе', 'Спасибо родителям'], avoid: 'Не затягивать.' , role: 'final'}
+    ]
+  },
+  {
+    id: 'senior',
+    title: 'Старший 12–15',
+    subtitle: 'Универсальный · 120 мин · 6–12 детей · квартира, кафе, двор',
+    defaults: { start: '16:00', cake: '17:00', kids: '9', age: '13' },
+    blocks: [
+      { id: 's1', dur: 8, title: 'Вход по-взрослому', icon: '🎤', game: '', music: '«Вход», 40 %',
+        say: ['Привет. Я [имя], веду праздники.', 'План на два часа: детектив, потом поедим, потом фотоквест на телефонах, в конце музыка и призы.', 'Телефоны можно, но в детективе они не помогут. Кто хочет — участвует, кто хочет — смотрит. Поехали.'],
+        todo: ['Говорить ровно, без «задора»', 'Сразу снять тему телефонов'], avoid: 'Не сюсюкать и не «здравствуйте, дети».' , role: 'start'},
+      { id: 's2', dur: 7, title: 'Две правды и преувеличение', icon: '🗣️', game: '№2', music: 'Фоном, тихо',
+        say: ['Каждый говорит три факта о себе, один — ложь. Остальные голосуют.'],
+        todo: ['Если компания закрытая — заменить на №5 «Счёт до 20»'], avoid: 'Не давить на стеснительных.' , role: 'names'},
+      { id: 's3', dur: 5, title: 'Секретный друг', icon: '🤫', game: '№6', music: 'Тихо',
+        say: ['У каждого тайная миссия: незаметно сделать приятное этому человеку.', 'В конце угадаем, кто чей.'],
+        todo: ['Раздать бумажки с именами', 'Следить, чтобы никто не раскрылся сразу'], avoid: 'Не объяснять, зачем это нужно.' , role: 'teams'},
+      { id: 's4', dur: 30, title: 'Детектив «Кто украл торт»', icon: '🕵️', game: '№24', music: 'Фоном, атмосферно',
+        say: ['Торт украли. Среди нас есть тот, кто это сделал.', 'У каждого роль: факт и алиби. Есть 10 минут на расспросы.', 'Голосуем: кто это сделал?'],
+        todo: ['Раздать роли, один — похититель', 'Улики объявлять каждые 5 минут', 'Если разгадали быстро — «появился второй соучастник»'], avoid: 'Не подсказывать прямым текстом.' , role: 'quiz'},
+      { id: 's5', dur: 15, title: 'Еда и свобода', icon: '🍕', game: '', music: 'Их музыка, 40 %',
+        say: ['Пятнадцать минут ваши. Ешьте, сидите в телефонах, я не трогаю.', 'В 16:55 начинаем фотоквест.'],
+        todo: ['Не занимать это время играми', 'Проверить заряд телефонов'], avoid: 'Не сокращать паузу — иначе возьмут сами, но с обидой.' , role: 'cake'},
+      { id: 's6', dur: 25, title: 'Фотоквест', icon: '📱', game: '№22', music: '«Движение»',
+        say: ['Команды по три-четыре человека, у каждой телефон.', 'Десять заданий, 20 минут. Оценивается скорость и попадание, не качество фото.'],
+        todo: ['Раздать списки', 'Не снимать тех, кто против', 'Сдавать «покажи экран» — интернет не обязателен'], avoid: 'Не оценивать красоту кадров.' , role: 'phone'},
+      { id: 's7', dur: 18, title: 'Гитара: мелодии и караоке', icon: '🎸', game: '№25, №27', music: 'Гитара вживую',
+        say: ['Восемь мелодий, кто первый — кричит ответ.', 'Если готовы — караоке-баттл: две команды поют по очереди.'],
+        todo: ['Мелодии 12+: «Звезда по имени Солнце», «Батарейка», «Кукла колдуна», «Как здорово», «Smoke on the Water», «Seven Nation Army»', 'Если петь не хотят — «заказать песню», поют все'], avoid: 'Никаких сольных номеров по принуждению.' , role: 'guitar'},
+      { id: 's8', dur: 10, title: 'Аукцион и одно слово', icon: '🏆', game: '№32, №33', music: 'Бодро',
+        say: ['Счёт [X] : [Y]. Тратим очки на призы.', 'Последнее: каждый одним словом — каким был праздник?'],
+        todo: ['Приз каждому', 'Право выбрать музыку как приз'], avoid: 'Не тянуть финал.' , role: 'auction'},
+      { id: 's9', dur: 2, title: 'Фото', icon: '📸', game: '', music: 'Тёплое',
+        say: ['Все сюда, фото!'],
+        todo: ['Пока все вместе'], avoid: 'Не после того, как разойдутся.' , role: 'final'}
+    ]
+  }
+];
+
+/* Ситуации: нажал — получил действие и фразу. */
+const SITUATIONS = [
+  { id: 'no-play', icon: '🙅', title: 'Дети не хотят играть', change: 'Переходим на механику: дартс на 3 минуты. Без уговоров.', goto: 'active',
+    action: ['Не уговаривать. Сказать вслух: «Ладно, тогда я сыграю, а вы смотрите».', 'Начать играть с одним-двумя желающими — обычно подключаются через минуту.', 'Если через 2 минуты пусто — сменить игру на Доббль/Свинтус.'],
+    phrase: '«Ладно, тогда я сыграю, а вы смотрите. Кто захочет — присоединяйтесь».' },
+  { id: 'sabotage', icon: '😤', title: 'Один ребёнок саботаж', change: 'Даём роль судьи — саботажник занят, блок идёт как есть.',
+    action: ['Дать роль: судья, хранитель времени, оператор.', 'Не воспитывать при всех.', 'Потом отвести в сторону и спросить: «тебе скучно или что-то не так?»'],
+    phrase: '«Ты будешь судьёй и объявишь результат. Это самая важная роль».' },
+  { id: 'crowd', icon: '👥', title: 'Толпятся у стола', change: 'Правило очереди + «хранитель очереди» из детей.',
+    action: ['Остановить игру, дождаться тишины.', 'Повторить правило: бросаем по одному, болеем с дивана.', 'Назначить «хранителя очереди».'],
+    phrase: '«Стоп. Бросаем по одному, остальные болеют с дивана. Кто не сядет — тот следующий не бросает».' },
+  { id: 'cry', icon: '😢', title: 'Кто-то плачет', change: 'Пауза в блоке. Один взрослый с ребёнком, остальным — задание.',
+    action: ['Остановить блок, увести внимание группы в другую сторону (дать задание).', 'Присесть на уровень ребёнка и спросить: «что случилось?»', 'Позвать родителя, не разбираться при всех.'],
+    phrase: '«Так, стоп. Все смотрим на меня — вот задание... А мы с тобой отойдём на минутку».' },
+  { id: 'fight', icon: '🥊', title: 'Драка', change: 'Стоп-игра. Дальше — нейтральная активность вместо текущей.', goto: 'active',
+    action: ['Остановить музыку, громко «Стоп».', 'Развести словами, не руками.', 'Обоих — к родителям по одному. Программу продолжить с нейтральной игры.'],
+    phrase: '«Стоп! Руки убрали. Расходимся в разные стороны».' },
+  { id: 'cake-late', icon: '⏳', title: 'Торт задерживают', change: 'Вставляем 5 минут активности, торт сдвигается.', goto: 'active',
+    action: ['Не объявлять задержку детям.', 'Вставить короткий блок: дартс на 3 минуты или одну мелодию на гитаре.', 'Дальше вернуться к сценарию.'],
+    phrase: '«У нас есть ещё пять минут — кто хочет бросить дартс?»', goto: 'active' },
+  { id: 'cake-early', icon: '🎂', title: 'Торт раньше времени', change: 'Порядок: торт → гитара → призы → фото.', goto: 'cake',
+    action: ['Не сокращать блоки — менять порядок: торт, потом гитара, потом призы, фото.', 'Предупредить родителей, что финал сдвинется.'],
+    phrase: '«Торт у нас раньше — отлично. Тогда сначала торт, потом гитара».' },
+  { id: 'tech', icon: '🔌', title: 'Техника подвела', change: 'Играем на гитаре, без колонки. Микрофон убираем.', goto: 'guitar',
+    action: ['Колонка села — повербанк, не помогло — играем на гитаре.', 'Микрофон свистит — отойти от колонки и убавить громкость.', 'Нет музыки — объявить игру с голосом: «поём сами».'],
+    phrase: '«Музыка решила отдохнуть, значит поём сами».' },
+  { id: 'props', icon: '🧰', title: 'Реквизит сломался', change: 'Замена из чемодана: Доббль, Свинтус, Крокодил.',
+    action: ['Объявить вслух и превратить в игру (пауза не должна выглядеть как сбой).', 'Открыть запас: Доббль, Свинтус, Крокодил из чемоданчика.'],
+    phrase: '«Шарик лопнул — объявляется конкурс на самый громкий смех».' },
+  { id: 'more-kids', icon: '➕', title: 'Гостей больше, чем ожидалось', change: 'Команды по 5–6, карусель станций вместо одного круга.', goto: 'teams',
+    action: ['Пересчитать. Больше 15 — микрогруппы по 5–6 и карусель станций.', 'Сказать родителю спокойно: «призов на 10, детей 15 — часть игр заменю на командные».'],
+    phrase: '«Отлично, нас больше. Тогда работаем командами».' },
+  { id: 'too-fast', icon: '⏩', title: 'Всё идёт быстрее плана', change: 'Бонусный блок: дартс + мелодия. Финал не раньше 15 минут до конца.', goto: 'active',
+    action: ['Не тянуть блоки. Добавить: дартс, Доббль, ещё одну мелодию, «Крокодил» на 10 минут.', 'Помнить: за 15 минут до конца — финальная игра.'],
+    phrase: '«Отлично, мы быстрее. Вот бонус — игра на пять минут».' },
+  { id: 'phones', icon: '📵', title: 'Все в телефонах (12+)', change: 'Фотоквест вместо запретов — телефон становится реквизитом.', goto: 'phone',
+    action: ['Не бороться и не запрещать.', 'Сразу дать фотоквест или кибертурнир — телефон становится инструментом.'],
+    phrase: '«Телефоны разрешены. Более того, они нам сейчас понадобятся».' },
+  { id: 'parents', icon: '👨‍👩‍👦', title: 'Родители вмешиваются', change: 'Родителям — задача: видео, торт, время. Ведущий один.',
+    action: ['Дать им задачу: снимать видео, подать торт, держать время.', 'Не спорить при детях, кто здесь ведущий.'],
+    phrase: '«Ольга, помогите, пожалуйста, с призами — вы лучше знаете, кто что любит».' },
+  { id: 'extra-time', icon: '⏱️', title: 'Просят остаться дольше', change: 'Доп. час — 1 500 ₽, говорим сразу. Программа продолжается.', goto: 'auction',
+    action: ['Называть цену сразу: дополнительный час — 1 500 ₽.', 'Бесплатное «полчасика» становится правилом.'],
+    phrase: '«Могу, но следующий час у меня занят — это дополнительный час за 1 500 ₽».' },
+  { id: 'age-mismatch', icon: '🎂', title: 'Дети другого возраста', change: 'Деление по возрасту на команды, квиз подстраиваем.', goto: 'teams',
+    action: ['Младше 6–7: убрать квиз, добавить «Найди цвет» и лимбо.', 'Старше 11–12: квиз на 3 раунда, «Собери слово» → «Снайпер».', 'Разброс большой: делить на команды по возрасту.'],
+    phrase: '«Так, у нас тут разные возраста — делимся по командам».' },
+  { id: 'no-prizes', icon: '🎁', title: 'Призов не хватает', change: 'Делим мельче: наклейки + бонус за участие каждому.', goto: 'final',
+    action: ['Делить мельче: наклейки по одной.', 'Добавить «бонус за участие» каждому.', 'Приз обязательно каждому ребёнку.'],
+    phrase: '«Бонус за участие: по одному очку каждому».' }
+];
+
+/* Игры: краткая карточка для экрана. */
+const GAMES = [
+  { n: 1, name: 'Имя и движение', age: '8–15', min: 7, inv: 'нет', how: 'Круг: имя + движение, все повторяют хором. Второй круг — угадать, чьё движение.', fail: 'Стесняются — начать с себя, движения смешные.' },
+  { n: 2, name: 'Две правды и преувеличение', age: '11–15', min: 10, inv: 'нет', how: 'Три факта о себе, один — ложь. Группа голосует.', fail: 'Компания закрытая — заменить на «Счёт до 20».' },
+  { n: 3, name: 'Найди цвет', age: '8–11', min: 5, inv: 'нет', how: '«Раз, два, три — жёлтый цвет найди!» Кто не успел — придумывает следующий.', fail: 'Мало цвета — «найди круглое».' },
+  { n: 4, name: 'Молекулы', age: '8–15', min: 5, inv: 'нет', how: '«Атомы» ходят, по команде сбиваются в группы по N. Деление на команды.', fail: 'Тесно — «встаньте по росту».' },
+  { n: 5, name: 'Счёт до 20', age: '10–15', min: 5, inv: 'нет', how: 'Считают по одному числу без договорённости. Совпали — заново.', fail: 'Буксуют — до 10 и с жестами.' },
+  { n: 6, name: 'Секретный друг', age: '9–15', min: 7, inv: 'бумажки', how: 'Тянут имя, весь праздник тайно делают приятное. В финале угадывают.', fail: 'Расстроился — равные призы всем.' },
+  { n: 7, name: 'Собери слово', age: '8–12', min: 15, inv: 'карточки с буквами', how: '14 карточек спрятаны, две команды собирают слово из 8 букв.', fail: 'Не находят — подсказка-карта; быстро — второе слово.' },
+  { n: 8, name: 'Переправа', age: '8–13', min: 15, inv: '4–6 листов картона', how: 'Команды переходят «болото» по плотам, на листе всегда нога.', fail: 'Скользко — «кто быстрее соберёт» без ходьбы.' },
+  { n: 9, name: 'Снайпер', age: '8–13', min: 10, inv: 'бумага, мешок', how: 'Снежки из бумаги в мешок с 2–3 метров, 3 броска.', fail: 'Легко — отодвинуть мешок.' },
+  { n: 10, name: 'Бой шариками', age: '9–15', min: 10, inv: '30–50 шариков, лента', how: 'Комната делится, перебрасывают шарики на чужую половину, считают.', fail: 'Мало шариков — один на команду.' },
+  { n: 11, name: 'Лимбо', age: '8–12', min: 7, inv: 'верёвка', how: 'Проходят под лентой, выбывшие — судьи.', fail: 'Мало места — стоя на месте.' },
+  { n: 12, name: 'Крокодил', age: '8–15', min: 15, inv: 'карточки', how: 'Показывает жестами, команда угадывает за 60 секунд.', fail: 'Стесняются — «объясни словами».' },
+  { n: 13, name: 'Общий пульс', age: '12–15', min: 10, inv: 'нет', how: 'Ритм передают по кругу пожатиями, не искажая.', fail: 'Не любят касаться — хлопками по коленям.' },
+  { n: 14, name: 'Карусель станций', age: '9–15', min: 30, inv: 'реквизит станций', how: '15+ детей: 4 станции, группы по 5–7, смена каждые 6–8 минут.', fail: 'Групп мало — 2 станции по очереди.' },
+  { n: 15, name: 'Квиз по командам', age: '9–15', min: 25, inv: 'лист счёта, карточки', how: '4–5 раундов по 6 вопросов, счёт на стене.', fail: 'Одна команда в нуле — «догоняющий раунд».' },
+  { n: 16, name: 'Контакт', age: '11–15', min: 15, inv: 'нет', how: 'Загадывает слово, называет первую букву, остальные выводят на неё подсказками.', fail: 'Сложно — «угадай слово по вопросам».' },
+  { n: 17, name: 'Данетки', age: '11–15', min: 15, inv: '3–4 истории', how: 'Загадочная ситуация, вопросы только «да/нет/неважно».', fail: 'Тишина — наводящие вопросы вслух.' },
+  { n: 18, name: 'Мафия', age: '13–15', min: 30, inv: 'карточки ролей', how: '8–12 игроков, роли, ведущий не играет.', fail: 'Мало людей — «Кто я?» или данетки.' },
+  { n: 19, name: 'Что ты там делал?', age: '13–15', min: 15, inv: 'карточки мест', how: 'Группа загадывает место, вернувшийся угадывает по пантомиме.', fail: 'Стесняются — по трём вопросам письменно.' },
+  { n: 20, name: 'Кто я?', age: '10–15', min: 15, inv: 'стикеры', how: 'На спину клеят персонажа, вопросы «да/нет».', fail: 'Не знают персонажей — профессии и животные.' },
+  { n: 21, name: 'Конверты по квартире', age: '8–12', min: 25, inv: '6–8 конвертов', how: 'Загадка ведёт к следующему месту, финал — приз.', fail: 'Не находят — подсказка каждые 2 минуты.' },
+  { n: 22, name: 'Фотоквест', age: '11–15', min: 25, inv: 'телефоны, список', how: '10 заданий командам, 20 минут, оценивается скорость.', fail: 'Нельзя снимать — «найди и принеси».' },
+  { n: 23, name: 'QR-квест', age: '13–15', min: 30, inv: 'QR-коды, телефон', how: 'Коды по площадке, за каждым задание, финал — код от приза.', fail: 'Нет интернета — не затевать.' },
+  { n: 24, name: 'Кто украл торт', age: '10–15', min: 30, inv: 'роли + улики', how: 'У каждого факт и алиби, один похититель. Улики каждые 5 минут, голосование.', fail: 'Не втянулись — объявить улику громко.' },
+  { n: 25, name: 'Угадай мелодию', age: '8–15', min: 15, inv: 'гитара', how: 'Играю 8–10 мелодий по 10–15 секунд, команды пишут ответы.', fail: 'Сложно — первые 4 ноты и подсказки.' },
+  { n: 26, name: 'Песня про именинника', age: '9–15', min: 20, inv: 'гитара, бумага', how: 'Команды пишут 4 строки на знакомый мотив, поют по очереди.', fail: 'Не идёт — шаблон с пропусками.' },
+  { n: 27, name: 'Караоке-баттл', age: '12–15', min: 20, inv: 'гитара', how: 'Две команды поют по очереди, судьи из гостей.', fail: 'Не хотят петь — «заказать песню» всем вместе.' },
+  { n: 28, name: 'Стоп-музыка', age: '8–13', min: 7, inv: 'колонка', how: 'Музыка стоп — все замерли, шевельнулся — судья.', fail: 'Стесняются — «замри в позе животного».' },
+  { n: 29, name: 'Оркестр', age: '8–14', min: 10, inv: 'нет', how: 'Группы получают партии: хлопки, щелчки, топот; дирижирую.', fail: 'Хаос — оставить две партии.' },
+  { n: 30, name: 'Похвала по кругу', age: '8–15', min: 7, inv: 'нет', how: 'Каждый говорит конкретное, что понравилось сегодня.', fail: 'Стесняются — начать с себя, дать пример.' },
+  { n: 31, name: 'Стена воспоминаний', age: '9–15', min: 10, inv: 'ватман, стикеры', how: 'Пишут/рисуют момент праздника, клеят на ватман.', fail: 'Не хотят писать — рисуют, я записываю.' },
+  { n: 32, name: 'Аукцион призов', age: '9–15', min: 10, inv: 'призы, очки', how: 'Очки тратятся на призы: наклейки 1, значок 2, брелок 3.', fail: 'Мало очков — «бонус за участие».' },
+  { n: 33, name: 'Одно слово', age: '8–15', min: 3, inv: 'нет', how: 'Круг: каким был праздник? Одно слово от каждого.', fail: 'Заминка — «можно звуком».' },
+  { n: 34, name: 'Кибертурнир с комментатором', age: '12–15', min: 45, inv: 'телефоны, сетка', how: 'Пары играют в мобильную игру, ведущий комментирует и ведёт сетку.', fail: 'Игры разные — мафия или фотоквест.' },
+  { n: 35, name: 'Бункер', age: '13–15', min: 35, inv: 'карточки ролей', how: 'Апокалипсис, мест меньше, каждый аргументирует, группа голосует.', fail: 'Не спорят — мафия или кодовые имена.' }
+];
+
+const PHRASES = [
+  { h: 'Открытие', t: '«Привет! Меня зовут [имя], следующие полтора часа я отвечаю за то, чтобы вам не было скучно. Три правила: играем вместе, не обижаем друг друга, ничего не ломаем. Поехали!»' },
+  { h: 'Переход между блоками', t: '«Стоп, отлично. Теперь...» — одна фраза и сразу действие. Никаких «а не хотите ли ещё».' },
+  { h: 'Если блок провис', t: '«Ладно, это была разминка. Вот игра настоящая» — и сразу начать, не объясняя.' },
+  { h: 'Если толпятся', t: '«Бросаем по одному, остальные болеют с дивана. Кто не сядет — тот следующий не бросает».' },
+  { h: 'Счёт', t: '«Счёт: [X] : [Y]. Но это ещё ничего не значит, впереди [следующий блок]».' },
+  { h: 'Закрытие', t: '«Последнее: каждый одним словом — каким был этот праздник? ... [ребёнок], с днём рождения! Все сюда, фото!»' }
+];
+
+const CHECKLIST = [
+  { g: 'За день', items: ['Подтвердить время, адрес, код домофона, парковку', 'Спросить число детей, возраст, аллергии', 'Уточнить, во сколько торт', 'Распечатать карточки квиза, буквы, шарады', 'Скачать плейлисты офлайн, зарядить технику', 'Прогнать сценарий вслух с таймером'] },
+  { g: 'За 2 часа', items: ['Собрать две сумки по списку', 'Проверить колонку, микрофон, гитару', 'Взять блокнот, ручку, 1 000 ₽ на сдачу', 'Выехать за 60 минут до начала'] },
+  { g: 'На месте', items: ['Написать «я на месте», найти взрослого', 'Осмотреть комнату: убрать бьющееся, закрыть балкон', 'Договориться: кто снимает, кто подаёт торт', 'Спрятать карточки с буквами', 'Проверить музыку', 'Сходить в туалет и вымыть руки'] },
+  { g: 'После', items: ['Спросить родителя: что понравилось, что нет', 'Снять 20–40 секунд видео (с согласия)', 'Попросить отзыв, напомнить вечером', 'Получить остаток, отправить чек', 'Вечером: записать строку в progress'] }
+];
+
+</script>
+<script>
+/* Праздник Рядом — приложение-суфлёр.
+   Без зависимостей. Всё состояние — в localStorage. */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const LS = 'pr_sufler_v1';
+const pad = n => String(n).padStart(2, '0');
+
+const store = {
+  get() { try { return localStorage.getItem(LS); } catch (e) { return null; } },
+  set(v) { try { localStorage.setItem(LS, v); } catch (e) {} },
+  del() { try { localStorage.removeItem(LS); } catch (e) {} }
+};
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const scen = id => SCENARIOS.find(s => s.id === id) || SCENARIOS[0];
+
+let firstRun = false;
+
+function loadState() {
+  let saved = null;
+  try { saved = JSON.parse(store.get() || 'null'); } catch (e) {}
+  const sc = scen((saved && saved.sid) || 'dima10');
+  const st = Object.assign({
+    sid: sc.id, idx: 0, manual: false, startedAt: null, enteredAt: Date.now(),
+    cake: sc.defaults.cake || '', name: 'Дима', host: '', fs: 1, theme: 'dark',
+    checks: {}, day: todayKey()
+  }, saved || {});
+
+  // Новый день или первый запуск: ставим план «на сейчас», торт — через час.
+  if (!saved || st.day !== todayKey() || !st.startedAt) {
+    firstRun = true;
+    const now = Date.now();
+    st.day = todayKey();
+    st.startedAt = now;
+    st.enteredAt = now;
+    st.manual = false;
+    st.idx = 0;
+    st.cake = fmt(now + 60 * 60000);
+  }
+  return st;
+}
+let S = loadState();
+const save = () => store.set(JSON.stringify(S));
+
+function atTime(hhmm) {
+  const [h, m] = (hhmm || '15:00').split(':').map(Number);
+  const d = new Date();
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d.getTime();
+}
+function fmt(ts) { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function mmss(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return Math.floor(s / 60) + ':' + pad(s % 60);
+}
+const fill = t => String(t)
+  .replace(/\[имя\]/g, S.host || '[ваше имя]')
+  .replace(/\[ребёнок\]/g, S.name || 'именинник');
+const blocks = () => scen(S.sid).blocks;
+const block = () => blocks()[Math.min(S.idx, blocks().length - 1)];
+function offsetBefore(i) { return blocks().slice(0, i).reduce((a, b) => a + b.dur, 0); }
+function blockStart(i) { return S.startedAt + offsetBefore(i) * 60000; }
+function blockEnd(i) { return blockStart(i) + blocks()[i].dur * 60000; }
+
+function remainingMs() {
+  const b = block();
+  if (S.manual) return Math.max(0, b.dur * 60000 - (Date.now() - S.enteredAt));
+  return Math.max(0, blockEnd(S.idx) - Date.now());
+}
+function autoIndex() {
+  const el = (Date.now() - S.startedAt) / 60000;
+  let acc = 0;
+  for (let i = 0; i < blocks().length; i++) {
+    if (el < acc + blocks()[i].dur) return i;
+    acc += blocks()[i].dur;
+  }
+  return blocks().length - 1;
+}
+
+/* ─────────── Рендер ─────────── */
+function render() {
+  const sc = scen(S.sid);
+  const b = block();
+  $('#scName').textContent = sc.title;
+  document.documentElement.style.setProperty('--fs', S.fs);
+  document.documentElement.dataset.theme = S.theme;
+
+  // прогресс
+  const pr = $('#progress');
+  pr.innerHTML = '';
+  blocks().forEach((bl, i) => {
+    const d = document.createElement('div');
+    d.className = 'seg' + (i < S.idx ? ' done' : i === S.idx ? ' now' : '');
+    d.title = bl.title;
+    d.onclick = () => goto(i);
+    pr.appendChild(d);
+  });
+
+  // заголовок блока
+  $('#bTime').textContent = fmt(blockStart(S.idx)) + ' – ' + fmt(blockEnd(S.idx));
+  $('#bTitle').textContent = b.title;
+  $('#bDur').textContent = b.dur + ' мин';
+
+  // говорю
+  const say = $('#bSay');
+  say.innerHTML = '';
+  (b.say || []).forEach(line => {
+    const p = document.createElement('p');
+    p.textContent = fill(line);
+    if (line.includes('?')) p.classList.add('q');
+    say.appendChild(p);
+  });
+
+  // делаю
+  const todo = $('#bTodo');
+  todo.innerHTML = '';
+  (b.todo || []).forEach((t, i) => {
+    const li = document.createElement('li');
+    const key = b.id + ':' + i;
+    if (S.checks[key]) li.classList.add('done');
+    li.innerHTML = '<b>' + (S.checks[key] ? '✓' : '') + '</b><span></span>';
+    li.querySelector('span').textContent = fill(t);
+    li.onclick = () => { S.checks[key] = !S.checks[key]; save(); render(); };
+    todo.appendChild(li);
+  });
+
+  // мета
+  const meta = $('#bMeta');
+  meta.innerHTML = '';
+  if (b.music) meta.insertAdjacentHTML('beforeend', '<span>🎵 ' + b.music + '</span>');
+  if (b.game) meta.insertAdjacentHTML('beforeend', '<span>🎲 ' + b.game + '</span>');
+  $('#bAvoid').innerHTML = b.avoid ? '<b>Не делать:</b> ' + b.avoid : '';
+
+  const nb = blocks()[S.idx + 1];
+  $('#bNext').innerHTML = nb
+    ? 'Дальше: <b>' + nb.icon + ' ' + nb.title + '</b> · ' + nb.dur + ' мин'
+    : 'Это последний блок. Финал.';
+  $('#nextLabel').textContent = nb ? nb.dur + ' мин' : 'финал';
+
+  $('#btnPrompter').disabled = !(b.say && b.say.length);
+  tick();
+}
+
+function tick() {
+  const now = new Date();
+  $('#clock').textContent = fmt(now.getTime());
+
+  // торт
+  const cake = $('#cake');
+  if (S.cake) {
+    const diff = atTime(S.cake) - now.getTime();
+    if (diff > 0) {
+      const m = Math.ceil(diff / 60000);
+      cake.textContent = 'торт через ' + m + ' мин (' + S.cake + ')';
+      cake.classList.toggle('soon', diff < 6 * 60000);
+    } else {
+      cake.textContent = 'торт: ' + S.cake + ' · уже пора';
+      cake.classList.remove('soon');
+    }
+  } else { cake.textContent = 'торт не задан'; }
+
+  // авто-переход по плану
+  if (!S.manual) {
+    const ai = autoIndex();
+    if (ai !== S.idx) { S.idx = ai; save(); render(); return; }
+  }
+
+  const rem = remainingMs();
+  const b = block();
+  $('#remain').textContent = mmss(rem);
+  const fill = $('#fill');
+  const pct = rem / (b.dur * 60000) * 100;
+  fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  fill.classList.toggle('low', rem < 45000);
+
+  if ($('#prompter').classList.contains('open')) renderPrompter();
+}
+
+function goto(i) {
+  S.idx = Math.max(0, Math.min(i, blocks().length - 1));
+  S.manual = true;
+  S.enteredAt = Date.now();
+  save(); render();
+}
+function next() { if (S.idx < blocks().length - 1) goto(S.idx + 1); else toast('Это последний блок'); }
+function prev() { goto(S.idx - 1); }
+function shift(sec) {
+  const rem = remainingMs();
+  const b = block();
+  S.manual = true;
+  S.enteredAt = Date.now() - (b.dur * 60000 - rem - sec * 1000);
+  save(); tick();
+}
+
+/* ─────────── Оверлеи ─────────── */
+function open(id) { $('#' + id).classList.add('open'); }
+function closeAll() { $$('.sheet').forEach(s => s.classList.remove('open')); }
+
+// ситуация ищет блок по роли, потом по id, потом по «активности»
+function findBlock(key) {
+  if (!key) return -1;
+  const byRole = blocks().findIndex(b => b.role === key);
+  if (byRole >= 0) return byRole;
+  const byId = blocks().findIndex(b => b.id === key);
+  if (byId >= 0) return byId;
+  if (key !== 'active') return findBlock('active');
+  return blocks().findIndex(b => b.role === 'quiz');
+}
+
+function renderSituations() {
+  const g = $('#sitGrid');
+  g.innerHTML = '';
+  SITUATIONS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'card';
+    b.innerHTML = '<div class="t">' + s.icon + ' ' + s.title + '</div>';
+    b.onclick = () => showSituation(i);
+    g.appendChild(b);
+  });
+}
+function showSituation(i) {
+  const s = SITUATIONS[i];
+  $('#sitTitle').textContent = s.title;
+  const body = $('#sitBody');
+  body.innerHTML = '';
+  const ol = document.createElement('ol');
+  ol.className = 'big-action';
+  s.action.forEach(a => {
+    const li = document.createElement('li');
+    li.textContent = a;
+    ol.appendChild(li);
+  });
+  body.appendChild(ol);
+  const ph = document.createElement('div');
+  ph.className = 'phrase';
+  ph.innerHTML = '<h3>Сказать</h3><p>' + fill(s.phrase) + '</p>';
+  body.appendChild(ph);
+
+  if (s.change) {
+    const ch = document.createElement('div');
+    ch.className = 'changebox';
+    ch.innerHTML = '<b>Что меняется</b><span></span>';
+    ch.querySelector('span').textContent = s.change;
+    body.appendChild(ch);
+  }
+
+  const g = $('#sitGoto');
+  const target = findBlock(s.goto);
+  if (target >= 0) {
+    g.style.display = '';
+    g.textContent = 'К блоку: ' + blocks()[target].title;
+    g.onclick = () => { closeAll(); goto(target); };
+  } else { g.style.display = 'none'; }
+
+  open('sheetSitOne');
+}
+
+let gFilter = 'Все', gQuery = '';
+function renderGames() {
+  const chips = $('#gChips');
+  if (!chips.dataset.done) {
+    ['Все', '8–11', '11–15', '12–15', '8–15'].forEach(f => {
+      const c = document.createElement('button');
+      c.className = 'chip' + (f === gFilter ? ' on' : '');
+      c.textContent = f;
+      c.onclick = () => { gFilter = f; chips.dataset.done = ''; renderGames(); };
+      chips.appendChild(c);
+    });
+    chips.dataset.done = '1';
+  }
+  const grid = $('#gGrid');
+  grid.innerHTML = '';
+  const q = gQuery.toLowerCase().trim();
+  const list = GAMES.filter(g => {
+    const okAge = gFilter === 'Все' || g.age.includes(gFilter.replace('–', '–'));
+    const okQ = !q || (g.name + ' ' + g.how + ' ' + g.inv).toLowerCase().includes(q);
+    return okAge && okQ;
+  });
+  if (!list.length) { grid.innerHTML = '<div class="empty">Ничего не нашлось</div>'; return; }
+  list.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'card';
+    b.innerHTML = '<div class="t">№' + g.n + ' ' + g.name + '</div><div class="s">' + g.age + ' · ' + g.min + ' мин · ' + g.inv + '</div>';
+    b.onclick = () => showGame(g);
+    grid.appendChild(b);
+  });
+}
+function showGame(g) {
+  $('#gameTitle').textContent = '№' + g.n + ' ' + g.name;
+  const body = $('#gameBody');
+  body.innerHTML =
+    '<div class="meta" style="margin-bottom:12px"><span>' + g.age + '</span><span>' + g.min + ' мин</span><span>' + g.inv + '</span></div>' +
+    '<div class="panel"><h2>Как играть</h2><p style="font-size:19px;margin:0">' + g.how + '</p></div>' +
+    '<div class="panel" style="margin-top:10px"><h2>Если не пошло</h2><p style="font-size:17px;margin:0;color:var(--muted)">' + g.fail + '</p></div>';
+  open('sheetGameOne');
+}
+
+function renderPhrases() {
+  const b = $('#phraseBody');
+  b.innerHTML = '';
+  PHRASES.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'phrase';
+    d.innerHTML = '<h3>' + p.h + '</h3><p>' + fill(p.t) + '</p>';
+    b.appendChild(d);
+  });
+}
+
+function renderChecklist() {
+  const b = $('#checkBody');
+  b.innerHTML = '';
+  CHECKLIST.forEach(g => {
+    const h = document.createElement('h3');
+    h.className = 'group';
+    h.textContent = g.g;
+    b.appendChild(h);
+    g.items.forEach((it, i) => {
+      const key = 'c:' + g.g + ':' + i;
+      const d = document.createElement('div');
+      d.className = 'check' + (S.checks[key] ? ' on' : '');
+      d.innerHTML = '<b>' + (S.checks[key] ? '✓' : '') + '</b><span></span>';
+      d.querySelector('span').textContent = it;
+      d.onclick = () => { S.checks[key] = !S.checks[key]; save(); renderChecklist(); };
+      b.appendChild(d);
+    });
+  });
+}
+
+function renderScenarios() {
+  const g = $('#scGrid');
+  g.innerHTML = '';
+  SCENARIOS.forEach(sc => {
+    const b = document.createElement('button');
+    b.className = 'card';
+    b.innerHTML = '<div class="t">' + (sc.id === S.sid ? '✓ ' : '') + sc.title + '</div><div class="s">' + sc.subtitle + '</div>';
+    b.onclick = () => {
+      S.sid = sc.id;
+      S.idx = 0; S.manual = false;
+      // если заявленное время уже прошло — считаем от «сейчас»
+      S.startedAt = Math.max(Date.now(), atTime(sc.defaults.start || '15:00'));
+      S.cake = fmt(S.startedAt + 60 * 60000);
+      S.enteredAt = Date.now();
+      save(); closeAll(); render(); toast('Сценарий: ' + sc.title);
+    };
+    g.appendChild(b);
+  });
+}
+
+function renderSettings() {
+  $('#inpStart').value = fmt(S.startedAt);
+  $('#inpCake').value = S.cake;
+  $('#inpKids').value = S.name;
+  $('#inpHost').value = S.host;
+  $$('[data-fs]').forEach(c => c.classList.toggle('on', Number(c.dataset.fs) === S.fs));
+  $$('[data-theme]').forEach(c => { if (c.dataset.theme) c.classList.toggle('on', c.dataset.theme === S.theme); });
+}
+
+/* ─────────── Суфлёр ─────────── */
+let pIdx = 0;
+function openPrompter() {
+  pIdx = 0;
+  $('#prompter').classList.add('open');
+  try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+  renderPrompter();
+}
+function renderPrompter() {
+  const b = block();
+  const lines = b.say || [];
+  $('#pTitle').textContent = b.title;
+  $('#pClock').textContent = fmt(Date.now());
+  const dots = $('#pDots');
+  dots.innerHTML = lines.map((_, i) => '<i class="' + (i === pIdx ? 'on' : '') + '"></i>').join('');
+  $('#pText').innerHTML = '<p>' + fill(lines[pIdx] || '—') + '</p>';
+}
+function pMove(d) {
+  const lines = block().say || [];
+  pIdx = Math.max(0, Math.min(pIdx + d, lines.length - 1));
+  renderPrompter();
+}
+
+/* ─────────── Прочее ─────────── */
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 1800);
+}
+
+/* ─────────── События ─────────── */
+$('#prev').onclick = prev;
+$('#next').onclick = next;
+$('#minus').onclick = () => shift(-60);
+$('#plus').onclick = () => shift(60);
+$('#btnMenu').onclick = () => open('sheetMenu');
+$('#btnSit').onclick = () => { renderSituations(); open('sheetSit'); };
+$('#btnGames').onclick = () => { renderGames(); open('sheetGames'); };
+
+$('#btnPrompter').onclick = openPrompter;
+$('#pPrev').onclick = e => { e.stopPropagation(); pMove(-1); };
+$('#pNext').onclick = e => { e.stopPropagation(); pMove(1); };
+$('#pClose').onclick = e => { e.stopPropagation(); $('#prompter').classList.remove('open'); };
+$('#pText').onclick = () => pMove(1);
+
+$$('[data-close]').forEach(b => b.onclick = () => { const s = b.closest('.sheet'); if (s) s.classList.remove('open'); });
+$$('[data-open]').forEach(b => b.onclick = () => {
+  const k = b.dataset.open;
+  closeAll();
+  if (k === 'scenarios') { renderScenarios(); open('sheetScenarios'); }
+  if (k === 'phrases') { renderPhrases(); open('sheetPhrases'); }
+  if (k === 'checklist') { renderChecklist(); open('sheetChecklist'); }
+  if (k === 'settings') { renderSettings(); open('sheetSettings'); }
+});
+
+// игры
+$('#gSearch').oninput = e => { gQuery = e.target.value; renderGames(); };
+// ситуации
+$('#sitBack').onclick = () => { $('#sheetSitOne').classList.remove('open'); };
+
+// настройки
+$$('[data-fs]').forEach(c => c.onclick = () => { S.fs = Number(c.dataset.fs); save(); renderSettings(); render(); });
+$$('[data-theme]').forEach(c => c.onclick = () => { if (!c.dataset.theme) return; S.theme = c.dataset.theme; save(); renderSettings(); render(); });
+$('#inpStart').onchange = e => {
+  const v = e.target.value;
+  if (/^\d{1,2}:\d{2}$/.test(v)) { S.startedAt = atTime(v); S.manual = false; S.idx = 0; save(); render(); }
+};
+$('#inpCake').onchange = e => { S.cake = e.target.value; save(); tick(); };
+$('#inpKids').onchange = e => { S.name = e.target.value; save(); render(); };
+$('#inpHost').onchange = e => { S.host = e.target.value; save(); render(); };
+$('#btnRestart').onclick = () => { S.idx = 0; S.manual = false; S.startedAt = Date.now(); S.enteredAt = Date.now(); save(); closeAll(); render(); toast('Начали с начала'); };
+$('#btnResetAll').onclick = () => { store.del(); S = loadState(); closeAll(); render(); toast('Сброшено'); };
+
+// клавиатура (для проверки за компьютером)
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') next();
+  if (e.key === 'ArrowLeft') prev();
+  if (e.key === 'Escape') { closeAll(); $('#prompter').classList.remove('open'); }
+  if (e.key.toLowerCase() === 's') { renderSituations(); open('sheetSit'); }
+  if (e.key.toLowerCase() === 'g') { renderGames(); open('sheetGames'); }
+  if (e.key.toLowerCase() === 'f') openPrompter();
+});
+
+// не гасим экран на выезде
+document.addEventListener('click', () => {
+  try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+}, { once: true });
+
+// офлайн (в песочнице предпросмотра может быть запрещено — не роняем приложение)
+try {
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+} catch (e) {}
+
+window.__appReady = true;
+
+// старт
+renderSituations(); renderGames();
+render();
+if (firstRun) {
+  setTimeout(() => toast('План на сейчас · торт в ' + S.cake), 600);
+  if (!S.host) setTimeout(() => toast('Меню → Настройки: впишите своё имя для приветствия'), 3400);
+}
+setInterval(tick, 1000);
+
+</script>
+</body>
+</html>
