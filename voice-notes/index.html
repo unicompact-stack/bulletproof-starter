@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12141a">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Голосовые заметки: говоришь — текст появляется вживую, заметка сохраняется сама. Работает офлайн.">
+<title>Заметки — голосовые заметки</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Заметки">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ ГЛАВНЫЙ ЭКРАН ============ -->
+<div class="app" id="app">
+
+  <header class="header">
+    <div class="header__top">
+      <div class="brand">
+        <h1 class="brand__title">Заметки</h1>
+        <span class="badge" id="net-badge" data-state="offline">
+          <span class="badge__dot" aria-hidden="true"></span>
+          <span id="net-badge-text">офлайн</span>
+        </span>
+      </div>
+      <button class="icon-btn" id="new-note-btn" type="button" aria-label="Новая заметка вручную" title="Написать вручную">
+        <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m20 20-3.2-3.2"></path>
+      </svg>
+      <input class="search__input" id="search-input" type="search" inputmode="search"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             placeholder="Поиск по заметкам" aria-label="Поиск по заметкам">
+      <button class="search__clear" id="search-clear" type="button" aria-label="Очистить поиск" hidden>&times;</button>
+    </div>
+
+    <p class="engine" id="engine-line">Проверяю движок распознавания…</p>
+  </header>
+
+  <main class="main">
+
+    <!-- прогресс однократного скачивания офлайн-движка -->
+    <section class="download" id="download-card" hidden aria-live="polite">
+      <div class="download__row">
+        <span class="download__title" id="download-title">Качаем голосовой движок…</span>
+        <strong class="download__percent" id="download-percent">0%</strong>
+      </div>
+      <div class="download__bar"><i id="download-bar" style="width:0%"></i></div>
+      <p class="download__hint" id="download-hint">Один раз, дальше всё работает без интернета.</p>
+    </section>
+
+    <ul class="notes" id="notes-list" aria-label="Список заметок"></ul>
+
+    <div class="empty" id="empty-state" hidden>
+      <svg class="empty__icon" viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+        <path d="M8 8h8M8 12h8M8 16h5"></path>
+      </svg>
+      <p class="empty__title" id="empty-title">Пока пусто</p>
+      <p class="empty__text" id="empty-text">Нажми на микрофон и просто говори — текст появится сам, а заметка сохранится после 4 секунд тишины.</p>
+    </div>
+
+  </main>
+
+  <button class="fab" id="fab" type="button" aria-label="Записать голосовую заметку">
+    <span class="fab__pulse" aria-hidden="true"></span>
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+      <path d="M5 11a7 7 0 0 0 14 0"></path>
+      <path d="M12 18v3"></path>
+    </svg>
+  </button>
+</div>
+
+<!-- ============ ЭКРАН ЗАПИСИ ============ -->
+<section class="screen screen--record" id="record-screen" hidden role="dialog" aria-modal="true" aria-label="Запись заметки">
+  <header class="screen__bar">
+    <button class="icon-btn" id="record-cancel" type="button" aria-label="Отменить запись">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="m6 6 12 12M18 6 6 18"></path>
+      </svg>
+    </button>
+    <span class="screen__title" id="record-status">Слушаю…</span>
+    <span class="chip" id="record-engine">Web Speech</span>
+  </header>
+
+  <div class="record__body">
+    <div class="record__viz" id="record-viz" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <div class="record__text" id="record-text"><span class="record__final" id="record-final" aria-live="polite" aria-atomic="false"></span><span class="record__interim" id="record-interim" aria-hidden="true"></span><span class="record__placeholder" id="record-placeholder" aria-hidden="true">Говори…</span></div>
+  </div>
+
+  <footer class="record__footer">
+    <p class="record__hint" id="record-hint">Автосохранение после 4 секунд тишины</p>
+    <button class="stop" id="record-stop" type="button" aria-label="Остановить и сохранить">
+      <span class="stop__square" aria-hidden="true"></span>
+    </button>
+    <p class="record__label">стоп</p>
+  </footer>
+</section>
+
+<!-- ============ РЕДАКТОР ============ -->
+<section class="screen screen--editor" id="editor-screen" hidden role="dialog" aria-modal="true" aria-label="Редактор заметки">
+  <header class="screen__bar">
+    <button class="icon-btn" id="editor-back" type="button" aria-label="Закрыть редактор">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 5l-7 7 7 7"></path>
+      </svg>
+    </button>
+    <span class="screen__title" id="editor-title">Заметка</span>
+    <button class="icon-btn icon-btn--danger" id="editor-delete" type="button" aria-label="Удалить заметку">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path>
+        <path d="M10 11v6M14 11v6"></path>
+      </svg>
+    </button>
+  </header>
+
+  <textarea class="editor__text" id="editor-text" placeholder="Текст заметки…" spellcheck="true"
+            aria-label="Текст заметки"></textarea>
+
+  <p class="editor__meta" id="editor-meta"></p>
+
+  <footer class="editor__footer">
+    <button class="btn btn--primary" id="editor-save" type="button">Сохранить</button>
+  </footer>
+</section>
+
+<!-- ============ ЗАМЕТКА О НЕБЕЗОПАСНОМ КОНТЕКСТЕ ============ -->
+<div class="notice" id="insecure-notice" hidden role="alertdialog" aria-modal="true" aria-labelledby="insecure-title">
+  <div class="notice__card">
+    <h2 class="notice__title" id="insecure-title">Открой через localhost или HTTPS</h2>
+    <p class="notice__text" id="insecure-lead">
+      Микрофон и Service Worker браузер разрешает только в безопасном контексте.
+      При открытии двойным кликом (<code>file://</code>) запись и офлайн-кэш заблокированы —
+      это требование браузера, а не ошибка приложения.
+    </p>
+    <p class="notice__text">Запусти локальный сервер в папке приложения:</p>
+    <pre class="notice__code">python -m http.server 8000</pre>
+    <p class="notice__text">И открой <b>http://localhost:8000</b> (или адрес с HTTPS).</p>
+    <div class="notice__actions">
+      <button class="btn btn--ghost" id="notice-continue" type="button">Продолжить без микрофона</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script src="vosk-engine.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
