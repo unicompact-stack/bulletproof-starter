@@ -1083,6 +1083,7 @@
     rec.ready = false;
     rec.startedAt = Date.now();
     rec.lastTextAt = Date.now();
+    rec.lastError = null; // о сбое уже сказали тостом, не путаем им итог записи
 
     setRecordEngine('vosk');
     setRecordStatus('Переключаюсь на офлайн-движок…');
