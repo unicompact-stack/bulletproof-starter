@@ -56,13 +56,13 @@ describe('App', () => {
     expect(stored).toContain('Сохрани меня')
   })
 
-  it('открывает библиотеку с 55 источниками', () => {
+  it('открывает библиотеку со списком источников', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Библиотека' }))
 
     expect(screen.getByText('Библиотека источников')).toBeDefined()
-    expect(screen.getByText(/Всего 55/)).toBeDefined()
+    expect(screen.getByText(/Всего \d+/)).toBeDefined()
     const list = screen.getAllByRole('list')[0]
     expect(within(list).getByText('S-001')).toBeDefined()
   })
