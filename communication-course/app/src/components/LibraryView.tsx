@@ -2,11 +2,9 @@ import { useMemo, useState } from 'react'
 import { sources } from '../data/library'
 import { sourceLessons } from '../lib/library'
 
-type Props = { onBack: () => void }
-
 const STATUSES = ['все', 'проверено', 'на проверке', 'отклонено']
 
-export function LibraryView({ onBack }: Props) {
+export function LibraryView() {
   const [query, setQuery] = useState('')
   const [lesson, setLesson] = useState(0)
   const [status, setStatus] = useState('все')
@@ -29,14 +27,6 @@ export function LibraryView({ onBack }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-10">
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-6 text-sm text-muted transition hover:text-accent"
-      >
-        ← Все уроки
-      </button>
-
       <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
         Библиотека источников
       </h1>

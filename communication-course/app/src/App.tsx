@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
+import { ArticleList } from './components/ArticleList'
+import { ArticleView } from './components/ArticleView'
 import { LessonList } from './components/LessonList'
 import { LessonView } from './components/LessonView'
 import { LibraryView } from './components/LibraryView'
+import { Nav } from './components/Nav'
+import type { View } from './components/Nav'
+import { articles } from './data/articles'
 import { lessons } from './data/lessons'
 import { emptyProgress, loadProgress, saveProgress } from './lib/progress'
 import type { LessonProgress, ProgressMap } from './types'
 
-type View = 'lessons' | 'library'
-
 export default function App() {
-  const [currentId, setCurrentId] = useState<number | null>(null)
+  const [view, setView] = useState<View>('articles')
+  const [currentLessonId, setCurrentLessonId] = useState<number | null>(null)
+  const [currentArticleId, setCurrentArticleId] = useState<string | null>(null)
   const [progress, setProgress] = useState<ProgressMap>({})
   const [hydrated, setHydrated] = useState(false)
-  const [view, setView] = useState<View>('lessons')
 
   useEffect(() => {
     setProgress(loadProgress())
@@ -23,29 +27,37 @@ export default function App() {
     if (hydrated) saveProgress(progress)
   }, [progress, hydrated])
 
-  const current = lessons.find((l) => l.id === currentId) ?? null
+  const currentLesson = lessons.find((l) => l.id === currentLessonId) ?? null
+  const currentArticle = articles.find((a) => a.id === currentArticleId) ?? null
+
+  const toTop = () => window.scrollTo({ top: 0 })
+
+  const changeView = (next: View) => {
+    setView(next)
+    setCurrentLessonId(null)
+    setCurrentArticleId(null)
+    toTop()
+  }
 
   const openLesson = (id: number) => {
-    setCurrentId(id)
-    setView('lessons')
-    window.scrollTo({ top: 0 })
+    setCurrentLessonId(id)
+    toTop()
   }
 
-  const back = () => {
-    setCurrentId(null)
-    setView('lessons')
-    window.scrollTo({ top: 0 })
+  const openArticle = (id: string) => {
+    setCurrentArticleId(id)
+    toTop()
   }
 
-  const openLibrary = () => {
-    setView('library')
-    window.scrollTo({ top: 0 })
+  const backToList = () => {
+    setCurrentLessonId(null)
+    setCurrentArticleId(null)
+    toTop()
   }
 
-  const next = () => {
-    if (currentId === null) return
-    const nextId = Math.min(currentId + 1, lessons.length)
-    openLesson(nextId)
+  const nextLesson = () => {
+    if (currentLessonId === null) return
+    openLesson(Math.min(currentLessonId + 1, lessons.length))
   }
 
   const updateProgress = (id: number, value: LessonProgress) => {
@@ -70,34 +82,42 @@ export default function App() {
     )
   }
 
-  if (view === 'library') {
+  if (currentArticle) {
     return (
       <main className="min-h-screen">
-        <LibraryView onBack={back} />
+        <ArticleView article={currentArticle} onBack={backToList} />
+      </main>
+    )
+  }
+
+  if (currentLesson) {
+    return (
+      <main className="min-h-screen">
+        <LessonView
+          lesson={currentLesson}
+          total={lessons.length}
+          progress={progress[currentLesson.id] ?? emptyProgress(currentLesson)}
+          onChange={(value) => updateProgress(currentLesson.id, value)}
+          onBack={backToList}
+          onNext={nextLesson}
+        />
       </main>
     )
   }
 
   return (
     <main className="min-h-screen">
-      {current ? (
-        <LessonView
-          lesson={current}
-          total={lessons.length}
-          progress={progress[current.id] ?? emptyProgress(current)}
-          onChange={(value) => updateProgress(current.id, value)}
-          onBack={back}
-          onNext={next}
-        />
-      ) : (
+      <Nav view={view} onChange={changeView} />
+      {view === 'articles' && <ArticleList onOpen={openArticle} />}
+      {view === 'lessons' && (
         <LessonList
           lessons={lessons}
           progress={progress}
           onOpen={openLesson}
-          onOpenLibrary={openLibrary}
           onReset={reset}
         />
       )}
+      {view === 'library' && <LibraryView />}
     </main>
   )
 }

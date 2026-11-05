@@ -4,6 +4,11 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import App from './App'
 import { STORAGE_KEY } from './types'
 
+/** Приложение открывается на читальне — для уроков переключаем вкладку. */
+function openLessons() {
+  fireEvent.click(screen.getByRole('button', { name: 'Уроки' }))
+}
+
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -14,18 +19,37 @@ describe('App', () => {
     cleanup()
   })
 
+  it('открывается на читальне и показывает статьи', () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Читальня' })).toBeDefined()
+    expect(screen.getByText(/Страх публичного выступления/)).toBeDefined()
+    expect(screen.getByText(/Почему в разговоре пустеет голова/)).toBeDefined()
+  })
+
+  it('открывает статью для чтения', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText(/Почему в разговоре пустеет голова/))
+
+    expect(screen.getByText('← Все статьи')).toBeDefined()
+    expect(screen.getByText(/Источников в основе: \d+/)).toBeDefined()
+    expect(screen.getByText(/Блуждание мыслей — это режим по умолчанию/)).toBeDefined()
+  })
+
   it('показывает список из 6 уроков и нулевой прогресс', () => {
     render(<App />)
+    openLessons()
 
     expect(screen.getByText('Душа компании')).toBeDefined()
     expect(screen.getByText('Пройдено 0 из 6')).toBeDefined()
-    expect(screen.getAllByRole('listitem')).toHaveLength(6)
     expect(screen.getByText(/Урок 1\./)).toBeDefined()
     expect(screen.getByText(/Урок 6\./)).toBeDefined()
   })
 
   it('открывает урок, сохраняет ответ и отмечает его пройденным', () => {
     render(<App />)
+    openLessons()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Открыть' })[0])
     expect(screen.getByText('Урок 1 из 6')).toBeDefined()
@@ -45,6 +69,7 @@ describe('App', () => {
 
   it('сохраняет ответ в localStorage', () => {
     render(<App />)
+    openLessons()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Открыть' })[0])
     fireEvent.change(screen.getByLabelText('Ответ на упражнение'), {

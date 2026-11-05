@@ -5,7 +5,6 @@ type Props = {
   lessons: Lesson[]
   progress: ProgressMap
   onOpen: (id: number) => void
-  onOpenLibrary: () => void
   onReset: () => void
 }
 
@@ -21,29 +20,20 @@ function actionLabel(done: boolean, started: boolean): string {
   return 'Открыть'
 }
 
-export function LessonList({ lessons, progress, onOpen, onOpenLibrary, onReset }: Props) {
+export function LessonList({ lessons, progress, onOpen, onReset }: Props) {
   const done = completedCount(progress, lessons)
   const percent = lessons.length > 0 ? Math.round((done / lessons.length) * 100) : 0
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-10">
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            Душа компании
-          </h1>
-          <p className="mt-2 max-w-xl text-muted">
-            Личный курс общения: шесть уроков с практикой. Теория короткая,
-            упражнения настоящие.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenLibrary}
-          className="rounded-lg border border-line bg-card px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent"
-        >
-          Библиотека
-        </button>
+      <header className="mb-8">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          Душа компании
+        </h1>
+        <p className="mt-2 max-w-xl text-muted">
+          Личный курс общения: шесть уроков с практикой. Теория короткая,
+          упражнения настоящие.
+        </p>
       </header>
 
       <section
