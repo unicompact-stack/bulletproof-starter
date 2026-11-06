@@ -7,7 +7,10 @@ import { contentPlugin } from './vite-plugin-content.ts'
 export default defineConfig({
   plugins: [react(), tailwindcss(), contentPlugin()],
   server: {
+    // 0.0.0.0 обязателен: иначе превью в браузере не достучится до сервера.
     host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
     allowedHosts: true,
     fs: { allow: ['..'] },
   },
