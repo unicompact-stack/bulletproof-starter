@@ -11,6 +11,11 @@ export default defineConfig({
     allowedHosts: true,
     fs: { allow: ['..'] },
   },
+  // Mermaid тяжёлый и грузится лениво. Без этого Vite пересобирает его прямо
+  // во время работы и перезагружает страницу — выглядит как «приложение сломалось».
+  optimizeDeps: {
+    include: ['mermaid'],
+  },
   preview: {
     host: '0.0.0.0',
     allowedHosts: true,
