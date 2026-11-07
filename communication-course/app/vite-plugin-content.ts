@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const CONTENT_DIR = resolve(here, '../content')
+const CONTENT_DIR = resolve(here, '../library/lessons')
 const LIBRARY_FILE = resolve(here, '../library/sources.md')
 const TOPICS_FILE = resolve(here, '../library/TOPICS.md')
 const ARTICLES_DIR = resolve(here, '../library/articles')
@@ -18,7 +18,7 @@ const ARTICLE_NAME = /^A-\d{3}-[a-z0-9-]+\.md$/
 
 /**
  * Отдаёт markdown-контент курса как виртуальные модули.
- * Канонические файлы живут в ../content и ../library — приложение их не дублирует.
+ * Канонические файлы живут в ../library — приложение их не дублирует. — приложение их не дублирует.
  */
 export function contentPlugin(): Plugin {
   return {

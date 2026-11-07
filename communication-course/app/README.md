@@ -23,7 +23,7 @@ npm run lint    # tsc --noEmit
 
 ## Как устроено
 
-- **Контент** — канонические файлы `../content/lesson-01.md` … `lesson-06.md`.
+- **Контент** — канонические файлы `../library/lessons/lesson-01.md` … `lesson-06.md`.
 - **Загрузка контента** — `vite-plugin-content.ts` отдаёт markdown как
   виртуальные модули `virtual:content/lesson-01.md`. Дублирования нет.
 - **Парсер** — `src/lib/lesson.ts` разбирает урок на тело, чек-лист

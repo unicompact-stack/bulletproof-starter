@@ -147,7 +147,7 @@ path_md = md(re.sub(r'^\s*#\s+.*\n', '', (LIB / 'PATH.md').read_text(encoding='u
 data = {'articles': articles, 'topics': topics, 'sources': sources, 'notes': notes, 'path': path_md,
         'built': datetime.datetime.now().strftime('%d.%m.%Y')}
 
-TPL = (pathlib.Path(__file__).parent / 'shell.html').read_text(encoding='utf-8')
+TPL = (pathlib.Path(__file__).parent / 'reader-shell.html').read_text(encoding='utf-8')
 out = TPL.replace('/*__DATA__*/', json.dumps(data, ensure_ascii=False))
 dest = ROOT / 'Читальня.html'
 dest.write_text(out, encoding='utf-8')
