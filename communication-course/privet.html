@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Привет — проверка</title>
+<style>
+  body { font-family: Georgia, serif; background: #f6f5f2; color: #1c1b19;
+         margin: 0; padding: 40px 20px; text-align: center; }
+  h1 { font-size: 64px; color: #d94f30; margin: 0 0 8px; }
+  .card { max-width: 560px; margin: 0 auto; background: #fff; padding: 28px;
+          border-radius: 14px; box-shadow: 0 2px 16px rgba(0,0,0,.08); }
+  .row { display: flex; justify-content: space-between; padding: 10px 0;
+         border-bottom: 1px solid #eee; font-size: 17px; text-align: left; }
+  .row:last-child { border: 0; }
+  .ok { color: #2f7d5a; font-weight: bold; }
+  .bad { color: #d94f30; font-weight: bold; }
+  small { color: #777; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Привет</h1>
+    <p>Если это слово видно — файл открывается.</p>
+
+    <div class="row"><span>1. Текст виден</span><span class="ok">да, раз читаешь</span></div>
+    <div class="row"><span>2. Оформление (цвет, рамки)</span><span id="css" class="bad">нет</span></div>
+    <div class="row"><span>3. Картинка (рисованная схема)</span><span id="svg" class="bad">нет</span></div>
+    <div class="row"><span>4. Скрипты работают</span><span id="js" class="bad">нет</span></div>
+
+    <p style="margin-top:22px">
+      <svg width="240" height="90" viewBox="0 0 240 90" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="25" width="90" height="40" rx="8" fill="#fff" stroke="#1c1b19" stroke-width="2"/>
+        <text x="49" y="50" font-size="15" text-anchor="middle" fill="#1c1b19">зачин</text>
+        <line x1="96" y1="45" x2="140" y2="45" stroke="#1c1b19" stroke-width="2"/>
+        <polygon points="146,45 136,40 136,50" fill="#1c1b19"/>
+        <rect x="146" y="25" width="90" height="40" rx="8" fill="#d94f30"/>
+        <text x="191" y="50" font-size="15" text-anchor="middle" fill="#fff">развязка</text>
+      </svg>
+    </p>
+    <small>Это рисунок прямо внутри файла, без интернета.</small>
+
+    <p style="margin-top:22px"><small id="stamp"></small></p>
+  </div>
+
+<script>
+  // если скрипты отключены, надписи останутся красными «нет»
+  document.getElementById('js').textContent = 'да';
+  document.getElementById('js').className = 'ok';
+
+  var probe = getComputedStyle(document.querySelector('h1')).color;
+  if (probe.indexOf('217') > -1 || probe.indexOf('#d94f30') > -1) {
+    document.getElementById('css').textContent = 'да';
+    document.getElementById('css').className = 'ok';
+  }
+  if (document.querySelector('svg').getBoundingClientRect().width > 10) {
+    document.getElementById('svg').textContent = 'да';
+    document.getElementById('svg').className = 'ok';
+  }
+  document.getElementById('stamp').textContent =
+    'проверено в браузере: ' + new Date().toLocaleString('ru-RU');
+</script>
+</body>
+</html>

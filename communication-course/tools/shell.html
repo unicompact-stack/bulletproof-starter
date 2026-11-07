@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Читальня</title>
+<style>
+  :root { --paper:#f6f5f2; --ink:#1c1b19; --accent:#d94f30; --ok:#2f7d5a;
+          --mute:#6f6b66; --line:#e3e0da; --card:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:18px/1.62 Georgia,"Times New Roman",serif; }
+  .wrap { max-width: 780px; margin:0 auto; padding: 0 20px 80px; }
+  header { border-bottom:1px solid var(--line); background:var(--paper);
+           position:sticky; top:0; z-index:10; }
+  .hd { max-width:780px; margin:0 auto; padding:14px 20px; display:flex;
+        align-items:center; gap:14px; flex-wrap:wrap; }
+  .logo { font-weight:bold; font-size:21px; }
+  .logo span { color:var(--accent); }
+  nav { display:flex; gap:6px; margin-left:auto; }
+  nav button { font:inherit; font-size:15px; padding:6px 14px; cursor:pointer;
+    border:1px solid var(--line); background:var(--card); border-radius:20px; color:var(--mute); }
+  nav button.on { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .tools { display:flex; gap:10px; margin:22px 0 18px; flex-wrap:wrap; }
+  input, select { font:inherit; font-size:16px; padding:9px 13px; border:1px solid var(--line);
+    border-radius:9px; background:var(--card); color:var(--ink); }
+  input { flex:1; min-width:200px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:18px 20px; margin-bottom:12px; cursor:pointer; }
+  .card:hover { border-color:var(--accent); }
+  .card h3 { margin:0 0 6px; font-size:21px; }
+  .meta { font-size:14px; color:var(--mute); display:flex; gap:14px; flex-wrap:wrap; }
+  .tag { display:inline-block; font-size:13px; padding:2px 10px; border-radius:20px;
+         background:var(--paper); border:1px solid var(--line); color:var(--mute); }
+  .read { color:var(--ok); font-size:13px; }
+  article { background:var(--card); border:1px solid var(--line); border-radius:12px;
+            padding:30px 34px; margin-top:18px; }
+  article h1 { font-size:30px; line-height:1.25; margin:0 0 4px; }
+  article h2 { font-size:23px; margin:30px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--line); }
+  article h3 { font-size:19px; margin:22px 0 8px; color:var(--accent); }
+  article p { margin:12px 0; }
+  article ul, article ol { padding-left:24px; }
+  article li { margin:7px 0; }
+  table { border-collapse:collapse; width:100%; margin:16px 0; font-size:15px; }
+  th, td { border:1px solid var(--line); padding:8px 11px; text-align:left; vertical-align:top; }
+  th { background:var(--paper); }
+  code { background:var(--paper); padding:1px 5px; border-radius:4px; font-size:15px; }
+  pre.plain { background:var(--paper); padding:14px; border-radius:9px; overflow-x:auto; font-size:14px; }
+  a { color:var(--accent); }
+  .back { font:inherit; font-size:15px; background:none; border:0; color:var(--mute);
+          cursor:pointer; padding:0; margin-bottom:4px; }
+  .back:hover { color:var(--accent); }
+  /* схема */
+  .scheme { background:var(--paper); border:1px solid var(--line); border-radius:10px;
+            padding:16px; margin:18px 0; }
+  .edge { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0; }
+  .edge.dashed { opacity:.65; }
+  .box { background:var(--card); border:1px solid var(--ink); border-radius:8px;
+         padding:6px 12px; font-size:15px; }
+  .edge.dashed .box { border-style:dashed; }
+  .arrow { color:var(--accent); font-size:15px; white-space:nowrap; }
+  .lab { font-size:13px; color:var(--mute); padding:0 4px; }
+  /* источники */
+  .src { background:var(--card); border:1px solid var(--line); border-radius:10px;
+         padding:13px 16px; margin-bottom:9px; }
+  .src b { font-size:17px; }
+  .src .meta { margin-top:5px; }
+  .ok { color:var(--ok); } .warn { color:var(--accent); }
+  .note { margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); font-size:16px; }
+  .note h2, .note h3 { font-size:17px; border:0; margin:12px 0 6px; color:var(--ink); }
+  .empty { color:var(--mute); text-align:center; padding:40px; }
+  .sum { font-size:15px; color:var(--mute); margin-bottom:14px; }
+  footer { text-align:center; color:var(--mute); font-size:14px; padding:30px 20px; }
+  @media print { header,nav,.tools,.back { display:none } article { border:0 } }
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="logo">Чита<span>льня</span></div>
+  <nav>
+    <button id="tab-a" class="on">Статьи</button>
+    <button id="tab-p">Путь</button>
+    <button id="tab-l">Библиотека</button>
+  </nav>
+</div></header>
+
+<div class="wrap" id="app"></div>
+<footer id="foot"></footer>
+
+<script>
+const DATA = /*__DATA__*/;
+const $ = (s) => document.querySelector(s);
+let view = 'articles', current = null, q = '', topic = 'all';
+
+const KEY = 'chitalnya:read:v1';
+const readSet = () => { try { return new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); }
+                        catch (e) { return new Set(); } };
+const markRead = (id) => { const s = readSet(); s.add(id);
+  try { localStorage.setItem(KEY, JSON.stringify([...s])); } catch (e) {} };
+
+const topicName = (id) => (DATA.topics.find(t => t.id === id) || {}).title || id;
+
+function listArticles() {
+  const done = readSet();
+  const items = DATA.articles.filter(a =>
+    (topic === 'all' || a.topic === topic) &&
+    (!q || (a.title + ' ' + a.text + ' ' + topicName(a.topic)).toLowerCase().includes(q)));
+  const opts = ['<option value="all">все темы</option>']
+    .concat(DATA.topics.filter(t => DATA.articles.some(a => a.topic === t.id))
+      .map(t => `<option value="${t.id}"${topic === t.id ? ' selected' : ''}>${t.title}</option>`));
+  return `<div class="tools">
+      <input id="q" placeholder="поиск по статьям" value="${q.replace(/"/g, '&quot;')}">
+      <select id="t">${opts.join('')}</select>
+    </div>
+    <div class="sum">${items.length} из ${DATA.articles.length} · прочитано ${done.size}</div>` +
+    (items.length ? items.map(a => `<div class="card" data-id="${a.id}">
+        <h3>${a.title}</h3>
+        <div class="meta"><span class="tag">${topicName(a.topic)}</span>
+          <span>${a.reading}</span><span>${a.sources.length} источников</span>
+          ${done.has(a.id) ? '<span class="read">прочитано</span>' : ''}</div>
+      </div>`).join('')
+      : '<div class="empty">Ничего не нашлось. Попробуй другое слово.</div>');
+}
+
+function showArticle(a) {
+  markRead(a.id);
+  const used = DATA.sources.filter(s => a.sources.includes(s.id));
+  return `<button class="back" id="back">← ко всем статьям</button>
+    <article>
+      <h1>${a.title}</h1>
+      <div class="meta" style="margin-bottom:18px"><span class="tag">${topicName(a.topic)}</span>
+        <span>${a.reading}</span><span>обновлено ${a.updated}</span></div>
+      ${a.html}
+      <h2>Источники этой статьи</h2>
+      ${used.map(s => `<div class="src"><b>${s.title}</b><div class="meta">
+        <span>${s.author}</span><span>${s.year}</span>
+        <span class="${s.status === 'проверено' ? 'ok' : 'warn'}">${s.status}</span></div></div>`).join('')}
+    </article>`;
+}
+
+function listSources() {
+  const items = DATA.sources.filter(s => !q ||
+    (s.title + ' ' + s.author + ' ' + s.kind).toLowerCase().includes(q));
+  const ok = DATA.sources.filter(s => s.status === 'проверено').length;
+  return `<div class="tools"><input id="q" placeholder="поиск по источникам"
+      value="${q.replace(/"/g, '&quot;')}"></div>
+    <div class="sum">${items.length} из ${DATA.sources.length} · проверено ${ok}</div>` +
+    items.map(s => `<div class="src">
+      <b>${s.title}</b>
+      <div class="meta"><span>${s.author}</span><span>${s.year}</span><span>${s.kind}</span>
+        <span>${s.score}</span>
+        <span class="${s.status === 'проверено' ? 'ok' : 'warn'}">${s.status}</span>
+        ${s.link && s.link !== '—' ? '<span>' + s.link + '</span>' : ''}</div>
+      ${DATA.notes[s.id] ? `<details class="note"><summary>конспект</summary>${DATA.notes[s.id]}</details>` : ''}
+    </div>`).join('');
+}
+
+function render() {
+  $('#tab-a').className = view === 'articles' ? 'on' : '';
+  $('#tab-p').className = view === 'path' ? 'on' : '';
+  $('#tab-l').className = view === 'library' ? 'on' : '';
+  $('#app').innerHTML = current ? showArticle(current)
+    : view === 'articles' ? listArticles()
+    : view === 'path' ? `<article>${DATA.path}</article>`
+    : listSources();
+  $('#foot').textContent = `${DATA.articles.length} статей · ${DATA.sources.length} источников · собрано ${DATA.built}`;
+  const qi = $('#q');
+  if (qi) { qi.oninput = (e) => { q = e.target.value.toLowerCase().trim(); render(); qi2(); }; }
+  const ti = $('#t');
+  if (ti) ti.onchange = (e) => { topic = e.target.value; render(); };
+  document.querySelectorAll('.card').forEach(c => c.onclick = () => {
+    current = DATA.articles.find(a => a.id === c.dataset.id);
+    window.scrollTo(0, 0); render();
+  });
+  const b = $('#back');
+  if (b) b.onclick = () => { current = null; window.scrollTo(0, 0); render(); };
+}
+function qi2() { const i = $('#q'); if (i) { i.focus(); i.selectionStart = i.value.length; } }
+
+$('#tab-a').onclick = () => { view = 'articles'; current = null; q = ''; render(); };
+$('#tab-p').onclick = () => { view = 'path'; current = null; q = ''; render(); };
+$('#tab-l').onclick = () => { view = 'library'; current = null; q = ''; render(); };
+render();
+</script>
+</body>
+</html>
