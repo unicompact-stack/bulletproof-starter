@@ -4,7 +4,7 @@ title: Как устроен анекдот и почему он не всегд
 topic: T-06
 status: готово
 sources: [S-021, S-025, S-026, S-066, S-068, S-069, S-070, S-071]
-reading_time: 10 мин
+reading_time: 7 мин
 created: 2026-11-06
 updated: 2026-11-06
 ---

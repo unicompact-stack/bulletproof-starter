@@ -4,7 +4,7 @@ title: Почему в разговоре пустеет голова
 topic: T-01
 status: готово
 sources: [S-001, S-002, S-004, S-008, S-010, S-043, S-048]
-reading_time: 8 мин
+reading_time: 6 мин
 created: 2026-11-05
 updated: 2026-11-05
 ---

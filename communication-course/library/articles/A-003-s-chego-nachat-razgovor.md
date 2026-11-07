@@ -4,7 +4,7 @@ title: С чего начать разговор с незнакомым чел�
 topic: T-02
 status: готово
 sources: [S-011, S-013, S-030, S-040, S-041]
-reading_time: 7 мин
+reading_time: 5 мин
 created: 2026-11-05
 updated: 2026-11-05
 ---

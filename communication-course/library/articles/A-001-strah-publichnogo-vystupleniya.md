@@ -4,7 +4,7 @@ title: Страх публичного выступления — что о нё
 topic: T-07
 status: готово
 sources: [S-010, S-011, S-017, S-022, S-048, S-056, S-057, S-060, S-061]
-reading_time: 9 мин
+reading_time: 7 мин
 created: 2026-11-05
 updated: 2026-11-06
 ---

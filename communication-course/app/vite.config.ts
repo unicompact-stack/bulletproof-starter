@@ -24,7 +24,9 @@ export default defineConfig({
     allowedHosts: true,
   },
   test: {
-    environment: 'node',
+    // jsdom для всех тестов: раньше стоял 'node', а тестам компонентов
+    // приходилось включать jsdom докблоком — про него легко забыть.
+    environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
   },
 })
