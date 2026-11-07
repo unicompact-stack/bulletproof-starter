@@ -142,7 +142,9 @@ notes = {}
 for p in LIB.glob('notes/S-*.md'):
     notes[p.stem] = md(re.sub(r'^\s*#\s+.*\n', '', p.read_text(encoding='utf-8').lstrip(), count=1))
 
-data = {'articles': articles, 'topics': topics, 'sources': sources, 'notes': notes,
+path_md = md(re.sub(r'^\s*#\s+.*\n', '', (LIB / 'PATH.md').read_text(encoding='utf-8').lstrip(), count=1))
+
+data = {'articles': articles, 'topics': topics, 'sources': sources, 'notes': notes, 'path': path_md,
         'built': datetime.datetime.now().strftime('%d.%m.%Y')}
 
 TPL = (pathlib.Path(__file__).parent / 'shell.html').read_text(encoding='utf-8')

@@ -79,6 +79,7 @@
   <div class="logo">Чита<span>льня</span></div>
   <nav>
     <button id="tab-a" class="on">Статьи</button>
+    <button id="tab-p">Путь</button>
     <button id="tab-l">Библиотека</button>
   </nav>
 </div></header>
@@ -156,9 +157,12 @@ function listSources() {
 
 function render() {
   $('#tab-a').className = view === 'articles' ? 'on' : '';
+  $('#tab-p').className = view === 'path' ? 'on' : '';
   $('#tab-l').className = view === 'library' ? 'on' : '';
   $('#app').innerHTML = current ? showArticle(current)
-    : (view === 'articles' ? listArticles() : listSources());
+    : view === 'articles' ? listArticles()
+    : view === 'path' ? `<article>${DATA.path}</article>`
+    : listSources();
   $('#foot').textContent = `${DATA.articles.length} статей · ${DATA.sources.length} источников · собрано ${DATA.built}`;
   const qi = $('#q');
   if (qi) { qi.oninput = (e) => { q = e.target.value.toLowerCase().trim(); render(); qi2(); }; }
@@ -174,6 +178,7 @@ function render() {
 function qi2() { const i = $('#q'); if (i) { i.focus(); i.selectionStart = i.value.length; } }
 
 $('#tab-a').onclick = () => { view = 'articles'; current = null; q = ''; render(); };
+$('#tab-p').onclick = () => { view = 'path'; current = null; q = ''; render(); };
 $('#tab-l').onclick = () => { view = 'library'; current = null; q = ''; render(); };
 render();
 </script>
