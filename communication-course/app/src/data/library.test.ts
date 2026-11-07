@@ -37,4 +37,29 @@ describe('library', () => {
       expect(sourceLessons(s).length).toBeGreaterThan(0)
     }
   })
+
+  // Дважды заводили одну и ту же книгу под разными ID (S-035/S-085,
+  // S-028/S-072). Глазами это не ловится — пусть ловит тест.
+  it('нет двух источников с одинаковым автором и названием', () => {
+    const seen = new Map<string, string>()
+    const key = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+    for (const s of sources) {
+      const k = `${key(s.author)} :: ${key(s.title)}`
+      const prev = seen.get(k)
+      expect(prev, `${s.id} повторяет ${prev}: «${s.title}» — ${s.author}`).toBeUndefined()
+      seen.set(k, s.id)
+    }
+  })
+
+  it('нет двух источников с одинаковой ссылкой', () => {
+    const seen = new Map<string, string>()
+    for (const s of sources) {
+      const url = (s.url.match(/\((https?:[^)]+)\)/) ?? [])[1] ?? s.url
+      // «—» и ссылки на каталоги-агрегаторы могут повторяться законно
+      if (!url || !/doi\.org|gutenberg|pubmed|ncbi/.test(url)) continue
+      const prev = seen.get(url)
+      expect(prev, `${s.id} повторяет ${prev}: одна и та же ссылка ${url}`).toBeUndefined()
+      seen.set(url, s.id)
+    }
+  })
 })
