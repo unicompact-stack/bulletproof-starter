@@ -10,7 +10,11 @@ import { readFile, stat } from 'node:fs/promises'
 import { join, extname, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'dist')
+const HERE = fileURLToPath(new URL('.', import.meta.url))
+const ROOT = join(HERE, 'dist')
+// Запасной вариант: dist исключён из снимков и пропадает при восстановлении
+// сессии, а этот файл лежит в git. Без него превью отдавало бы 500.
+const STANDALONE = join(HERE, '..', 'Читальня.html')
 const PORT = Number(process.env.PORT) || 5173
 const HOST = '0.0.0.0' // обязательно: превью не видит localhost
 
@@ -57,9 +61,15 @@ const server = createServer(async (req, res) => {
     ext = '.html'
   }
 
+  // dist нет — отдаём автономную однофайловую читальню
+  if (body === null) {
+    body = await readIfFile(STANDALONE)
+    ext = '.html'
+  }
+
   if (body === null) {
     res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' })
-    res.end('dist не собран — выполните npm run build')
+    res.end('Нет ни dist, ни Читальня.html — выполните npm run build')
     return
   }
 
