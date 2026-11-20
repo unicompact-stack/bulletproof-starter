@@ -23,6 +23,7 @@
     for(const field of ['note','obstacle','nextStep']) {
       if(input[field]!==undefined){if(typeof input[field]!=='string' || input[field].length>2000)throw Error('Текст заметки или разбора должен быть не длиннее 2000 символов.');result[field]=input[field];}
     }
+    if(input.income!==undefined){if(typeof input.income!=='boolean')throw Error('Некорректная отметка задачи о заработке.');result.income=input.income;}
     return result;
   }
   const record = (state,text) => state.history.unshift({at:new Date().toISOString(),text});
@@ -35,6 +36,11 @@
     record(state,`${labels[status]}: ${item.title}${status==='cancelled' ? ' — '+reason.trim() : ''}`);
   }
   const overdue=(item,today)=>item.status==='open' && Boolean(item.date) && item.date<today;
+  function incomeWeek(s,day){
+    const start=monday(day),end=addDays(start,6);
+    const matching=s.tasks.filter(t=>t.income===true && t.date>=start && t.date<=end && (t.status==='open' || t.status==='done'));
+    return {start,end,open:matching.filter(t=>t.status==='open').length,done:matching.filter(t=>t.status==='done').length};
+  }
   function validateBackup(raw) {
     if(!raw || raw.version!==1 || !Array.isArray(raw.tasks) || !Array.isArray(raw.history) || typeof raw.notes!=='string') throw Error('Неверный формат резервной копии.');
     if(raw.tasks.length>10000 || raw.history.length>100000 || raw.notes.length>1000000) throw Error('Резервная копия слишком большая.');
@@ -109,7 +115,7 @@
   function report(s) {
     const labels={open:'в работе',done:'выполнено',cancelled:'отменено'};
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'неизвестен';
-    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.note?' · Заметка: '+t.note:''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
+    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
   }
-  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,overdue,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report};
+  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,overdue,incomeWeek,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report};
 });

@@ -38,12 +38,12 @@
     $('draft-status').textContent='Сохранено в этом браузере ✓';return true;
   }
   function element(tag,className,text){const node=document.createElement(tag);if(className) node.className=className;if(text!==undefined) node.textContent=text;return node;}
-  function openTask(item, date='') {
+  function openTask(item, date='', incomeDefault=false) {
     editing=item ? item.id : null;
     $('task-form').reset(); $('form-error').hidden=true;
     $('dialog-title').textContent=item?'Задача':'Новая задача';
     $('task-title').value=item?.title || ''; $('task-date').value=item?.date || date; $('task-time').value=item?.time || '';
-    $('task-note').value=item?.note || '';$('task-obstacle').value=item?.obstacle || '';$('task-next-step').value=item?.nextStep || '';
+    $('task-note').value=item?.note || '';$('task-obstacle').value=item?.obstacle || '';$('task-next-step').value=item?.nextStep || '';$('task-income').checked=item ? item.income===true : incomeDefault;
     $('task-review').open=Boolean(item && L.overdue(item,today()));
     $('dialog-status').textContent=item ? ({open:'В работе',done:'Выполнено',cancelled:'Отменено'})[item.status] : '';
     $('mark-done').hidden=!item || item.status!=='open'; $('reopen').hidden=!item || item.status==='open'; $('cancel-task').hidden=!item || item.status==='cancelled';
@@ -125,6 +125,10 @@
   };
   function render(){
     $('today-label').textContent=fmt(today(),{day:'numeric',month:'long',weekday:'long'});
+    const income=L.incomeWeek(state,today());
+    $('income-week-range').textContent='Даты задач на этой неделе: '+fmt(income.start,{day:'numeric',month:'short'})+' — '+fmt(income.end,{day:'numeric',month:'short',year:'numeric'});
+    $('income-status').textContent=!canWrite?'Сохранённые данные недоступны — сводка не рассчитана.':income.open+income.done ? `Отмеченных дел: ${income.open+income.done} · в работе: ${income.open} · выполнено: ${income.done}.` : 'На эту неделю нет отмеченных дел о заработке. Возможно, нужные дела ещё не отмечены.';
+    $('add-income').disabled=!canWrite;
     if(!notesDirty && $('notes').value!==state.notes) $('notes').value=state.notes;
     if(!draftDirty && $('source-text').value!==state.draft) $('source-text').value=state.draft;
     renderProposals();
@@ -181,14 +185,15 @@
     if(added && !commit(next))return;
     focus='2026-11-20';view='week';render();
   };
-  $('add-top').onclick=()=>openTask(null);$('add-inbox').onclick=()=>openTask(null);$('close-dialog').onclick=()=>$('task-dialog').close();
+  $('add-top').onclick=()=>openTask(null);$('add-inbox').onclick=()=>openTask(null);$('add-income').onclick=()=>openTask(null,'',true);$('close-dialog').onclick=()=>$('task-dialog').close();
   function applyTaskForm(next){
     const old=next.tasks.find(t=>t.id===editing);
     if(editing && !old)throw Error('Задача больше недоступна.');
-    const entry=L.task({id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value});
+    const entry=L.task({id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value,income:$('task-income').checked});
     if(old){
       const before=`${old.title} (${old.date||'без даты'}${old.time?' '+old.time:''})`,after=`${entry.title} (${entry.date||'без даты'}${entry.time?' '+entry.time:''})`;
       if(before!==after)L.record(next,`Изменено: ${before} → ${after}`);
+      if((old.income===true)!==entry.income)L.record(next,`${entry.income?'Отмечено как дело о заработке':'Снята отметка о заработке'}: ${entry.title}`);
       if((old.note||'')!==entry.note)L.record(next,`Обновлена заметка к задаче: ${entry.title}`);
       if((old.obstacle||'')!==entry.obstacle || (old.nextStep||'')!==entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);
       Object.assign(old,entry);

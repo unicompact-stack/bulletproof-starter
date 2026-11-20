@@ -112,3 +112,19 @@ test('разбор просрочки и заметки сохраняются, 
  const broken=JSON.parse(JSON.stringify(s));broken.tasks[0].obstacle='x'.repeat(2001);assert.throws(()=>L.validateBackup(broken));broken.tasks[0].obstacle=42;assert.throws(()=>L.validateBackup(broken));
  const old=L.validateBackup({version:1,tasks:[{id:'old',title:'Старое',date:'',time:'',status:'open'}],notes:'',history:[]});assert.equal(old.tasks[0].title,'Старое');assert.equal(old.tasks[0].note,undefined);
 });
+
+test('недельная сводка считает только отмеченные задачи в календарной неделе',()=>{
+ const s=L.empty();for(const t of [
+ {id:'start',title:'Понедельник',date:'2026-12-28',income:true},
+ {id:'end',title:'Воскресенье',date:'2027-01-03',income:true,status:'done'},
+ {id:'before',title:'До недели',date:'2026-12-27',income:true},
+ {id:'after',title:'После недели',date:'2027-01-04',income:true},
+ {id:'undated',title:'Без даты',date:'',income:true},
+ {id:'cancelled',title:'Отменено',date:'2027-01-01',income:true,status:'cancelled'},
+ {id:'unknown',title:'Связь неизвестна',date:'2027-01-01'},
+ ])s.tasks.push(L.task(t));
+ assert.deepEqual(L.incomeWeek(s,'2027-01-01'),{start:'2026-12-28',end:'2027-01-03',open:1,done:1});assert.throws(()=>L.incomeWeek(s,'not-a-date'));
+});
+test('отметки дохода сохраняются в копии и отчёте, старые задачи не классифицируются',()=>{
+ const s=L.empty();s.tasks.push(L.task({id:'income',title:'Найти клиента',date:'2026-11-20',income:true,note:'Мой контекст'}));s.tasks.push(L.task({id:'unknown',title:'Старое дело',date:'2026-11-20'}));const round=L.validateBackup(JSON.parse(JSON.stringify(s)));assert.deepEqual(round,s);assert.equal(round.tasks[1].income,undefined);assert.match(L.report(round),/Задача о заработке/);round.tasks[0].income='yes';assert.throws(()=>L.validateBackup(round));
+});
