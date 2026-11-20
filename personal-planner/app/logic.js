@@ -19,7 +19,11 @@
     if(!title || title.length>300) throw Error('Введите название задачи (до 300 символов).');
     if(date && !validDate(date)) throw Error('Укажите корректную дату.');
     if(time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw Error('Укажите корректное время.');
-    return {id:input.id||id(),title,date,time,status:input.status||'open'};
+    const result={id:input.id||id(),title,date,time,status:input.status||'open'};
+    for(const field of ['note','obstacle','nextStep']) {
+      if(input[field]!==undefined){if(typeof input[field]!=='string' || input[field].length>2000)throw Error('Текст заметки или разбора должен быть не длиннее 2000 символов.');result[field]=input[field];}
+    }
+    return result;
   }
   const record = (state,text) => state.history.unshift({at:new Date().toISOString(),text});
   function changeStatus(state, taskId, status, reason='') {
@@ -45,9 +49,9 @@
     if(typeof draft!=='string' || draft.length>100000 || !Array.isArray(rawSuggestions) || rawSuggestions.length>10000) throw Error('Ошибка в тексте или предложениях.');
     const proposalIds=new Set();
     const suggestions=rawSuggestions.map(p=>{
-      if(!p || typeof p.id!=='string' || !p.id || p.id.length>150 || proposalIds.has(p.id) || typeof p.title!=='string' || typeof p.date!=='string' || typeof p.time!=='string' || typeof p.reason!=='string' || p.reason.length>1000 || !['pending','later','accepted','rejected'].includes(p.status)) throw Error('Ошибка в предложении.');
+      if(!p || typeof p.id!=='string' || !p.id || p.id.length>150 || proposalIds.has(p.id) || typeof p.title!=='string' || typeof p.date!=='string' || typeof p.time!=='string' || typeof p.reason!=='string' || p.reason.length>1000 || (p.note!==undefined && (typeof p.note!=='string' || p.note.length>2000)) || !['pending','later','noted','accepted','rejected'].includes(p.status)) throw Error('Ошибка в предложении.');
       proposalIds.add(p.id);const checked=task({id:p.id,title:p.title,date:p.date,time:p.time});
-      return {id:checked.id,title:checked.title,date:checked.date,time:checked.time,reason:p.reason,status:p.status};
+      const result={id:checked.id,title:checked.title,date:checked.date,time:checked.time,reason:p.reason,status:p.status};if(p.note!==undefined)result.note=p.note;return result;
     });
     return {version:1,tasks,notes:raw.notes,history,draft,suggestions};
   }
@@ -81,16 +85,16 @@
   }
   function decideSuggestion(state,proposalId,action) {
     const item=state.suggestions.find(p=>p.id===proposalId);
-    if(!item || !['accept','later','reject','restore'].includes(action) || item.status==='accepted' || (item.status==='rejected' && action!=='restore') || (action==='restore' && item.status!=='rejected' && item.status!=='later')) throw Error('Это действие недоступно.');
+    if(!item || !['accept','later','note','reject','restore'].includes(action) || item.status==='accepted' || (item.status==='rejected' && action!=='restore') || (action==='restore' && !['rejected','later','noted'].includes(item.status))) throw Error('Это действие недоступно.');
     if(action==='accept'){
       const taskId='suggestion:'+item.id;
       if(state.tasks.some(t=>t.id===taskId))throw Error('Задача с таким ID уже существует.');
       if(state.tasks.length>=10000)throw Error('Слишком много задач.');
-      state.tasks.push(task({id:taskId,title:item.title,date:item.date,time:item.time}));item.status='accepted';
+      state.tasks.push(task({id:taskId,title:item.title,date:item.date,time:item.time,note:item.note}));item.status='accepted';
       record(state,`Принято предложение: ${item.title}${item.date?' — '+item.date:' — без даты'}`);
     }else{
-      item.status=action==='later'?'later':action==='reject'?'rejected':'pending';
-      record(state,`${action==='later'?'Отложено':action==='reject'?'Убрано':'Возвращено'} предложение: ${item.title}`);
+      item.status=action==='later'?'later':action==='note'?'noted':action==='reject'?'rejected':'pending';
+      record(state,`${action==='later'?'Отложено':action==='note'?'Сохранено в заметки':action==='reject'?'Убрано':'Возвращено'} предложение: ${item.title}`);
     }
   }
   function briefing(s, day) {
@@ -105,7 +109,7 @@
   function report(s) {
     const labels={open:'в работе',done:'выполнено',cancelled:'отменено'};
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'неизвестен';
-    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
+    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.note?' · Заметка: '+t.note:''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
   }
   return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,overdue,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report};
 });

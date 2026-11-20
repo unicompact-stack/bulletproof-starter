@@ -98,3 +98,17 @@ test('повторный импорт старого пакета не пред�
  const old={format:'personal-planner-tasks-v1',tasks:[{id:'legacy-task',title:'Сохранённая',date:'',time:''}]};
  assert.equal(L.mergeSuggestions(s,old),0);assert.equal(s.suggestions.length,0);assert.equal(s.tasks.length,1);
 });
+
+test('заметка к предложению сохраняется и переходит в задачу только после согласия',()=>{
+ const s=L.empty(),p={format:'personal-planner-suggestions-v1',suggestions:[{id:'idea',title:'Идея',date:'2026-11-25',time:'',reason:'Причина'}]};
+ L.mergeSuggestions(s,p);s.suggestions[0].note='Проверить детали';L.decideSuggestion(s,'idea','note');assert.equal(s.tasks.length,0);assert.equal(s.suggestions[0].status,'noted');assert.equal(L.mergeSuggestions(s,p),0);
+ const restored=L.validateBackup(JSON.parse(JSON.stringify(s)));assert.equal(restored.suggestions[0].note,'Проверить детали');L.decideSuggestion(restored,'idea','accept');assert.equal(restored.tasks[0].note,'Проверить детали');assert.equal(restored.tasks[0].date,'2026-11-25');assert.deepEqual(L.validateBackup(JSON.parse(JSON.stringify(restored))),restored);
+});
+test('сохранённую заметку можно вернуть и убрать, не создавая задачу',()=>{
+ const s=L.empty();L.mergeSuggestions(s,{format:'personal-planner-suggestions-v1',suggestions:[{id:'i',title:'Идея',date:'',time:'',reason:''}]});s.suggestions[0].note='Личный текст';L.decideSuggestion(s,'i','note');L.decideSuggestion(s,'i','restore');assert.equal(s.suggestions[0].note,'Личный текст');L.decideSuggestion(s,'i','later');L.decideSuggestion(s,'i','note');L.decideSuggestion(s,'i','reject');assert.equal(s.tasks.length,0);assert.equal(s.suggestions[0].note,'Личный текст');
+});
+test('разбор просрочки и заметки сохраняются, проверяются и входят в отчёт',()=>{
+ const s=L.empty();s.tasks.push(L.task({id:'review',title:'Отложенное',date:'2026-11-19',note:'Уточнение',obstacle:'Не хватило времени',nextStep:'Позвонить'}));assert.equal(L.overdue(s.tasks[0],'2026-11-20'),true);const round=L.validateBackup(JSON.parse(JSON.stringify(s)));assert.deepEqual(round,s);const report=L.report(round);assert.match(report,/Не хватило времени/);assert.match(report,/Позвонить/);assert.match(report,/Уточнение/);
+ const broken=JSON.parse(JSON.stringify(s));broken.tasks[0].obstacle='x'.repeat(2001);assert.throws(()=>L.validateBackup(broken));broken.tasks[0].obstacle=42;assert.throws(()=>L.validateBackup(broken));
+ const old=L.validateBackup({version:1,tasks:[{id:'old',title:'Старое',date:'',time:'',status:'open'}],notes:'',history:[]});assert.equal(old.tasks[0].title,'Старое');assert.equal(old.tasks[0].note,undefined);
+});

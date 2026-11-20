@@ -6,7 +6,7 @@
   const dateObj=value=>new Date(value+'T12:00:00');
   const fmt=(value,options)=>new Intl.DateTimeFormat('ru-RU',options).format(dateObj(value));
   const taskCount=n=>`${n} ${n%10===1 && n%100!==11 ? 'задача' : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 'задачи' : 'задач'}`;
-  let state=L.empty(), focus=today(), view='week', editing=null, canWrite=true, notesDirty=false, draftDirty=false, draftTimer=null;
+  let state=L.empty(), focus=today(), view='week', editing=null, editingIdea=null, canWrite=true, notesDirty=false, draftDirty=false, draftTimer=null;
   $('notes').addEventListener('input',()=>{notesDirty=true;$('note-status').textContent='Изменения ещё не сохранены.';});
   $('source-text').addEventListener('input',()=>{draftDirty=true;$('draft-status').textContent='Сохраняем…';clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,600);});
   window.addEventListener('beforeunload',event=>{if(notesDirty||draftDirty){event.preventDefault();event.returnValue='';}});
@@ -43,6 +43,8 @@
     $('task-form').reset(); $('form-error').hidden=true;
     $('dialog-title').textContent=item?'Задача':'Новая задача';
     $('task-title').value=item?.title || ''; $('task-date').value=item?.date || date; $('task-time').value=item?.time || '';
+    $('task-note').value=item?.note || '';$('task-obstacle').value=item?.obstacle || '';$('task-next-step').value=item?.nextStep || '';
+    $('task-review').open=Boolean(item && L.overdue(item,today()));
     $('dialog-status').textContent=item ? ({open:'В работе',done:'Выполнено',cancelled:'Отменено'})[item.status] : '';
     $('mark-done').hidden=!item || item.status!=='open'; $('reopen').hidden=!item || item.status==='open'; $('cancel-task').hidden=!item || item.status==='cancelled';
     $('task-dialog').showModal(); $('task-title').focus();
@@ -60,14 +62,15 @@
   function renderList(target,items,emptyText){target.replaceChildren(); if(!items.length)target.append(element('p','empty-small',emptyText));else items.forEach(t=>target.append(taskButton(t,true)));}
   function renderProposals(){
     const allPending=state.suggestions.filter(p=>p.status==='pending'),samples=allPending.filter(p=>p.id.startsWith('sample-proposal-')),real=allPending.filter(p=>!p.id.startsWith('sample-proposal-'));
-    const showSamplesSeparately=real.length>0 && samples.length>0,pending=showSamplesSeparately?real:allPending,later=state.suggestions.filter(p=>p.status==='later'),rejected=state.suggestions.filter(p=>p.status==='rejected');
-    $('proposal-count').textContent=pending.length;$('later-count').textContent=later.length;$('later-link-count').textContent=later.length;$('rejected-count').textContent=rejected.length;
+    const showSamplesSeparately=real.length>0 && samples.length>0,pending=showSamplesSeparately?real:allPending,later=state.suggestions.filter(p=>p.status==='later'),ideas=state.suggestions.filter(p=>p.status==='noted'),rejected=state.suggestions.filter(p=>p.status==='rejected');
+    $('proposal-count').textContent=pending.length;$('later-count').textContent=later.length;$('later-link-count').textContent=later.length;$('idea-count').textContent=ideas.length;$('idea-link-count').textContent=ideas.length;$('rejected-count').textContent=rejected.length;
     $('proposal-sub').textContent=pending.length>3?'Прокрути список и проверь каждую идею.':'Проверь каждую идею перед добавлением.';
     $('sample-section').hidden=!showSamplesSeparately;$('sample-count').textContent=samples.length;
     const draw=(target,items,empty)=>{target.replaceChildren();if(!items.length){target.append(element('p','proposal-empty',empty));return;}
       items.forEach(item=>{
         const card=element('article','proposal-card');const title=element('div','proposal-name',item.title);card.append(title);
         const reason=element('p','proposal-reason');reason.append(element('strong','proposal-reason-label','Почему так: '),document.createTextNode(item.reason || 'Объяснение пока не добавлено.'));card.append(reason);
+        if(item.note){const note=element('p','proposal-user-note');note.append(element('strong','','Твоя заметка: '),document.createTextNode(item.note));card.append(note);}
         const meta=element('div','proposal-meta'),label=element('label','',item.status==='rejected'?'Дата предложения':'Предложенная дата');
         const date=element('input','proposal-date');date.type='date';date.value=item.date;date.setAttribute('aria-label','Дата: '+item.title);date.disabled=item.status==='rejected';
         date.addEventListener('change',()=>{const next=copy(),p=next.suggestions.find(x=>x.id===item.id);if(date.value&&!L.validDate(date.value)){error('Некорректная дата предложения.');return;}p.date=date.value;L.record(next,`Изменена дата предложения: ${p.title} — ${p.date||'без даты'}`);commit(next);});
@@ -83,18 +86,40 @@
             if(action==='accept'){$('proposal-feedback').textContent=p.date?'Добавлено в календарь на '+fmt(p.date,{day:'numeric',month:'long',year:'numeric'})+'.':'Добавлено в список «Без даты».';$('proposal-feedback').hidden=false;}
             if(item.status==='later'){$('later-feedback').textContent=$('proposal-feedback').textContent;$('later-feedback').hidden=false;}
             else if(action==='later')$('later-feedback').hidden=true;
+            if(item.status==='noted'){$('idea-feedback').textContent=$('proposal-feedback').textContent;$('idea-feedback').hidden=false;}
           }catch(e){error(e.message);}
         };return b;};
         if(item.status!=='rejected')actions.append(button('✓ В календарь','proposal-accept','accept'));
         if(item.status==='pending')actions.append(button('На потом','proposal-later','later'));
-        if(item.status==='later' || item.status==='rejected')actions.append(button('Вернуть','proposal-later','restore'));
+        if(item.status!=='rejected'){const noteButton=element('button','proposal-note',item.status==='noted'?'Изменить заметку':'В заметки');noteButton.type='button';noteButton.onclick=()=>openIdea(item);actions.append(noteButton);}
+        if(item.status==='later' || item.status==='noted' || item.status==='rejected')actions.append(button('Вернуть','proposal-later','restore'));
         if(item.status!=='rejected')actions.append(button('Убрать','proposal-remove','reject'));
         card.append(actions);target.append(card);
       });};
     draw($('proposal-list'),pending,'Здесь появятся предложения из чата. Для знакомства нажми «Посмотреть пример».');
     draw($('sample-list'),showSamplesSeparately?samples:[],'Примеров пока нет.');
-    draw($('later-list'),later,'Отложенных предложений пока нет.');draw($('rejected-list'),rejected,'Убранных предложений пока нет.');
+    draw($('later-list'),later,'Отложенных предложений пока нет.');draw($('idea-list'),ideas,'Заметок из предложений пока нет.');draw($('rejected-list'),rejected,'Убранных предложений пока нет.');
   }
+  function openIdea(item){
+    editingIdea=item.id;$('idea-subject').textContent=item.title;$('idea-text').value=item.note || '';$('idea-error').hidden=true;
+    $('idea-title').textContent=item.status==='noted'?'Изменить заметку':'В заметки';$('idea-dialog').showModal();$('idea-text').focus();
+  }
+  $('close-idea-dialog').onclick=()=>$('idea-dialog').close();$('cancel-idea-dialog').onclick=()=>$('idea-dialog').close();
+  $('idea-form').addEventListener('submit',event=>{
+    event.preventDefault();try{
+      const next=copy(),item=next.suggestions.find(p=>p.id===editingIdea);
+      if(!item || item.status==='accepted' || item.status==='rejected')throw Error('Предложение больше недоступно.');
+      const previousStatus=item.status;item.note=$('idea-text').value;
+      L.decideSuggestion(next,item.id,'note');
+      if(commit(next)){
+        $('idea-dialog').close();$('idea-section').open=true;$('idea-feedback').hidden=true;
+        $('proposal-feedback').textContent='Сохранено во «Входящие» → «Заметки из предложений». В календарь не добавлено.';$('proposal-feedback').hidden=false;
+        if(previousStatus==='later'){$('later-feedback').textContent=$('proposal-feedback').textContent;$('later-feedback').hidden=false;}
+        if(previousStatus==='noted'){$('idea-feedback').textContent='Заметка сохранена.';$('idea-feedback').hidden=false;}
+      }else{$('idea-error').textContent=$('storage-error').textContent;$('idea-error').hidden=false;}
+    }catch(e){$('idea-error').textContent=e.message;$('idea-error').hidden=false;}
+  });
+  $('show-ideas').onclick=()=>{const section=$('idea-section');section.open=true;section.scrollIntoView({block:'center'});section.querySelector('summary').focus({preventScroll:true});};
   $('show-later').onclick=()=>{
     const section=$('later-section');section.open=true;section.scrollIntoView({block:'center'});section.querySelector('summary').focus({preventScroll:true});
   };
@@ -142,6 +167,7 @@
     }
     const inbox=state.tasks.filter(t=>!t.date && t.status!=='cancelled'),overdue=state.tasks.filter(t=>L.overdue(t,today())).sort((a,b)=>a.date.localeCompare(b.date)),cancelled=state.tasks.filter(t=>t.status==='cancelled');
     $('inbox-count').textContent=inbox.length;$('overdue-count').textContent=overdue.length;
+    $('overdue-question').hidden=overdue.length===0;$('overdue-tips').hidden=overdue.length===0;
     renderList($('inbox'),inbox,'Здесь пока пусто.');renderList($('overdue'),overdue,'Просроченных задач нет.');renderList($('cancelled'),cancelled,'Отменённых задач нет.');
     const list=$('history-list');list.replaceChildren();state.history.slice(0,30).forEach(h=>{const el=element('div','history-item');const when=new Date(h.at);el.append(element('time','',new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short'}).format(when)),element('span','',h.text));list.append(el);});
     if(!state.history.length)list.append(element('p','empty-small','Изменений пока нет.'));
@@ -156,15 +182,23 @@
     focus='2026-11-20';view='week';render();
   };
   $('add-top').onclick=()=>openTask(null);$('add-inbox').onclick=()=>openTask(null);$('close-dialog').onclick=()=>$('task-dialog').close();
+  function applyTaskForm(next){
+    const old=next.tasks.find(t=>t.id===editing);
+    if(editing && !old)throw Error('Задача больше недоступна.');
+    const entry=L.task({id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value});
+    if(old){
+      const before=`${old.title} (${old.date||'без даты'}${old.time?' '+old.time:''})`,after=`${entry.title} (${entry.date||'без даты'}${entry.time?' '+entry.time:''})`;
+      if(before!==after)L.record(next,`Изменено: ${before} → ${after}`);
+      if((old.note||'')!==entry.note)L.record(next,`Обновлена заметка к задаче: ${entry.title}`);
+      if((old.obstacle||'')!==entry.obstacle || (old.nextStep||'')!==entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);
+      Object.assign(old,entry);
+    }else {next.tasks.push(entry);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);if(entry.obstacle || entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);}
+  }
   $('task-form').addEventListener('submit',event=>{
-    event.preventDefault();try{
-      const next=copy(),old=next.tasks.find(t=>t.id===editing),entry=L.task({id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open'});
-      if(old){const before=`${old.title} (${old.date||'без даты'}${old.time?' '+old.time:''})`,after=`${entry.title} (${entry.date||'без даты'}${entry.time?' '+entry.time:''})`;Object.assign(old,entry);if(before!==after)L.record(next,`Изменено: ${before} → ${after}`);}
-      else {next.tasks.push(entry);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);}
-      if(commit(next))$('task-dialog').close();
-    }catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}
+    event.preventDefault();try{const next=copy();applyTaskForm(next);if(commit(next))$('task-dialog').close();else{$('form-error').textContent=$('storage-error').textContent;$('form-error').hidden=false;}}
+    catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}
   });
-  function setStatus(status){const next=copy();let reason='';if(status==='cancelled'){reason=prompt('Почему задача больше не актуальна? Причина сохранится в истории.');if(reason===null)return;}try{L.changeStatus(next,editing,status,reason);if(commit(next))$('task-dialog').close();}catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}}
+  function setStatus(status){const next=copy();let reason='';if(status==='cancelled'){reason=prompt('Почему задача больше не актуальна? Причина сохранится в истории.');if(reason===null)return;}try{applyTaskForm(next);L.changeStatus(next,editing,status,reason);if(commit(next))$('task-dialog').close();else{$('form-error').textContent=$('storage-error').textContent;$('form-error').hidden=false;}}catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}}
   $('mark-done').onclick=()=>setStatus('done');$('reopen').onclick=()=>setStatus('open');$('cancel-task').onclick=()=>setStatus('cancelled');
   function saveNotes(){
     if(!notesDirty)return true;
