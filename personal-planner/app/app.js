@@ -61,7 +61,7 @@
   function renderProposals(){
     const allPending=state.suggestions.filter(p=>p.status==='pending'),samples=allPending.filter(p=>p.id.startsWith('sample-proposal-')),real=allPending.filter(p=>!p.id.startsWith('sample-proposal-'));
     const showSamplesSeparately=real.length>0 && samples.length>0,pending=showSamplesSeparately?real:allPending,later=state.suggestions.filter(p=>p.status==='later'),rejected=state.suggestions.filter(p=>p.status==='rejected');
-    $('proposal-count').textContent=pending.length;$('later-count').textContent=later.length;$('rejected-count').textContent=rejected.length;
+    $('proposal-count').textContent=pending.length;$('later-count').textContent=later.length;$('later-link-count').textContent=later.length;$('rejected-count').textContent=rejected.length;
     $('proposal-sub').textContent=pending.length>3?'Прокрути список и проверь каждую идею.':'Проверь каждую идею перед добавлением.';
     $('sample-section').hidden=!showSamplesSeparately;$('sample-count').textContent=samples.length;
     const draw=(target,items,empty)=>{target.replaceChildren();if(!items.length){target.append(element('p','proposal-empty',empty));return;}
@@ -77,8 +77,12 @@
           try{const next=copy(),p=next.suggestions.find(x=>x.id===item.id),oldFocus=focus,oldView=view;L.decideSuggestion(next,item.id,action);
             if(action==='accept' && p.date){focus=p.date;view='week';}
             if(!commit(next)){focus=oldFocus;view=oldView;return;}
-            if(action==='later')$('later-section').open=true;
+            if(action==='later'){$('later-section').open=true;$('proposal-feedback').textContent='Отложено. Найдёшь во «Входящие» → «На потом»; открой по кнопке «На потом».';$('proposal-feedback').hidden=false;}
+            if(action==='restore'){$('proposal-feedback').textContent='Предложение возвращено в список на согласование.';$('proposal-feedback').hidden=false;}
+            if(action==='reject'){$('proposal-feedback').textContent='Предложение убрано. Его можно вернуть из раздела «Убранные».';$('proposal-feedback').hidden=false;}
             if(action==='accept'){$('proposal-feedback').textContent=p.date?'Добавлено в календарь на '+fmt(p.date,{day:'numeric',month:'long',year:'numeric'})+'.':'Добавлено в список «Без даты».';$('proposal-feedback').hidden=false;}
+            if(item.status==='later'){$('later-feedback').textContent=$('proposal-feedback').textContent;$('later-feedback').hidden=false;}
+            else if(action==='later')$('later-feedback').hidden=true;
           }catch(e){error(e.message);}
         };return b;};
         if(item.status!=='rejected')actions.append(button('✓ В календарь','proposal-accept','accept'));
@@ -91,6 +95,9 @@
     draw($('sample-list'),showSamplesSeparately?samples:[],'Примеров пока нет.');
     draw($('later-list'),later,'Отложенных предложений пока нет.');draw($('rejected-list'),rejected,'Убранных предложений пока нет.');
   }
+  $('show-later').onclick=()=>{
+    const section=$('later-section');section.open=true;section.scrollIntoView({block:'center'});section.querySelector('summary').focus({preventScroll:true});
+  };
   function render(){
     $('today-label').textContent=fmt(today(),{day:'numeric',month:'long',weekday:'long'});
     if(!notesDirty && $('notes').value!==state.notes) $('notes').value=state.notes;

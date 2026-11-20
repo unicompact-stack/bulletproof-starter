@@ -13,3 +13,7 @@
 .proposal-name{font-size:14px;line-height:1.4;color:#302a36}.proposal-reason{font-size:13px;line-height:1.55;color:#514a56;margin:7px 0 10px}.proposal-reason-label{color:#5b397e;font-weight:700}
 @media(max-width:700px){.top{height:auto;min-height:76px;flex-wrap:wrap;padding:12px 4%;gap:8px}.top-right{flex-wrap:wrap;justify-content:flex-end}}
 @media(max-width:450px){.top-right{width:100%;justify-content:flex-start}}
+/* Отложенное находится во входящих; переход доступен и возле предложений. */
+.later-link{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 10px;padding:10px 12px;text-align:left;border:1px solid #dfd3ee;border-radius:9px;background:#f1ebf8;color:#624685;font-size:13px;font-weight:700}
+.later-link:hover{background:#e9dff4}.later-link span:first-child{border-radius:7px;background:#e2d6f0;padding:1px 7px}.later-link span:last-child{margin-left:auto}
+.later-box{margin-top:0}.later-box summary{color:#4f405e;font-size:13px}.later-hint{color:#665d69;font-size:12px;line-height:1.45;margin:9px 0}.later-box .proposal-list{max-height:400px;overflow-y:auto;overscroll-behavior:contain;padding-right:3px}.later-box .proposal-empty{color:#6b626f}.later-box .proposal-card{padding:10px}.later-box .proposal-actions button{font-size:11px}
