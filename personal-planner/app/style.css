@@ -8,3 +8,8 @@
 
 .chat-delivery{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:1px 0 10px;padding:8px 10px;border-radius:8px;background:#efeaf6;color:#82708e;font-size:10px;line-height:1.4}.chat-delivery button{border:0;background:transparent;color:#7c5aaa;font-size:10px;font-weight:750;padding:4px;white-space:nowrap}
 #proposal-list{max-height:390px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}#proposal-list:focus-visible{outline:3px solid #bda6e4;outline-offset:2px}
+
+/* Объяснение должно быть заметно и читаемо рядом с каждым решением. */
+.proposal-name{font-size:14px;line-height:1.4;color:#302a36}.proposal-reason{font-size:13px;line-height:1.55;color:#514a56;margin:7px 0 10px}.proposal-reason-label{color:#5b397e;font-weight:700}
+@media(max-width:700px){.top{height:auto;min-height:76px;flex-wrap:wrap;padding:12px 4%;gap:8px}.top-right{flex-wrap:wrap;justify-content:flex-end}}
+@media(max-width:450px){.top-right{width:100%;justify-content:flex-start}}

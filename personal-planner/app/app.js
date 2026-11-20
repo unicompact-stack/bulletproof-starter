@@ -14,9 +14,20 @@
   function error(message) {warning.textContent=message; warning.hidden=false;}
   try { const saved=localStorage.getItem(key); if(saved) state=L.validateBackup(JSON.parse(saved)); }
   catch(e) { canWrite=false; error('Не удалось прочитать сохранённые данные. Они не перезаписаны. Попробуйте загрузить резервную копию или сохранить старые данные через инструменты браузера.'); }
+  function improveKnownReasons(next) {
+    let changed=0;
+    for(const item of next.suggestions || []) {
+      const update=window.PLANNER_REASON_UPDATES.find(u=>u.id===item.id);
+      if(!update)continue;
+      for(const prefix of ['', 'Демонстрационный пример. ']) {
+        if(item.reason===prefix+update.before){item.reason=prefix+update.after;changed++;break;}
+      }
+    }
+    return changed;
+  }
   function commit(next, allowRecovery=false, renderNow=true) {
     if(!canWrite && !allowRecovery) {error('Сохранение заблокировано, чтобы не перезаписать данные. Загрузите проверенную резервную копию.');return false;}
-    try {const checked=L.validateBackup(next); localStorage.setItem(key,JSON.stringify(checked)); state=checked;canWrite=true;warning.hidden=true;if(renderNow)render();return true;}
+    try {const checked=L.validateBackup(next); improveKnownReasons(checked); localStorage.setItem(key,JSON.stringify(checked)); state=checked;canWrite=true;warning.hidden=true;if(renderNow)render();return true;}
     catch(e) {error('Не удалось сохранить изменения в браузере. Проверьте доступность хранилища и свободное место. '+e.message);return false;}
   }
   const copy=()=>JSON.parse(JSON.stringify(state));
@@ -56,7 +67,7 @@
     const draw=(target,items,empty)=>{target.replaceChildren();if(!items.length){target.append(element('p','proposal-empty',empty));return;}
       items.forEach(item=>{
         const card=element('article','proposal-card');const title=element('div','proposal-name',item.title);card.append(title);
-        if(item.reason)card.append(element('p','proposal-reason',item.reason));
+        const reason=element('p','proposal-reason');reason.append(element('strong','proposal-reason-label','Почему так: '),document.createTextNode(item.reason || 'Объяснение пока не добавлено.'));card.append(reason);
         const meta=element('div','proposal-meta'),label=element('label','',item.status==='rejected'?'Дата предложения':'Предложенная дата');
         const date=element('input','proposal-date');date.type='date';date.value=item.date;date.setAttribute('aria-label','Дата: '+item.title);date.disabled=item.status==='rejected';
         date.addEventListener('change',()=>{const next=copy(),p=next.suggestions.find(x=>x.id===item.id);if(date.value&&!L.validDate(date.value)){error('Некорректная дата предложения.');return;}p.date=date.value;L.record(next,`Изменена дата предложения: ${p.title} — ${p.date||'без даты'}`);commit(next);});
@@ -216,6 +227,8 @@
   }
   $('sync-chat').onclick=syncChat;
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncChat();});
+  // В старых браузерных данных обновляем только известные исходные тексты, не меняя решения пользователя.
+  if(canWrite){const next=copy();if(improveKnownReasons(next))commit(next,false,false);}
   const exampleMarker='Демонстрационный план 2026-11-20 загружен', proposalMarker='Демонстрационные предложения загружены';
   if(canWrite && (!state.history.some(h=>h.text===exampleMarker) || !state.history.some(h=>h.text===proposalMarker))) {
     const next=copy();
