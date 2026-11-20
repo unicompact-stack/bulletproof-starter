@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Речевой Реактор — тренажёр импровизации</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFBF0;
+  --card:#FFFFFF;
+  --ink:#141310;
+  --muted:#7A7468;
+  --line:#EFE9DD;
+  --accent:#FF3B30;
+  --accent2:#FF8A00;
+  --accent3:#2D6AFF;
+  --ok:#0EAD69;
+  --radius:20px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:20;background:rgba(255,251,240,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+.logo{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.02em}
+.logo-mark{width:38px;height:38px;border-radius:12px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800}
+.logo small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:-2px}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 16px;font:500 14px Manrope;cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hero{padding:28px 0 18px;display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:stretch}
+@media(max-width:900px){.hero{grid-template-columns:1fr}}
+.hero-main{background:var(--ink);color:#fff;border-radius:28px;padding:28px;position:relative;overflow:hidden}
+.hero-main:after{content:"";position:absolute;right:-40px;top:-40px;width:260px;height:260px;background:radial-gradient(closest-side, rgba(255,59,48,.45), transparent 70%);pointer-events:none}
+.hero-main h1{font-size:36px;line-height:.95;letter-spacing:-.04em;margin:0 0 10px}
+.hero-main p{color:#CFCAC0;margin:0 0 18px;font-size:15.5px;line-height:1.5;max-width:520px}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:999px;padding:13px 18px;font:700 14px Manrope;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn-dark{background:var(--ink);color:#fff}
+.kpis{display:grid;grid-template-rows:1fr 1fr;gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center}
+.kpi b{font-size:28px;letter-spacing:-.03em}
+.kpi span{font-size:13px;color:var(--muted)}
+.kpi-ring{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font:800 18px Manrope;background:conic-gradient(var(--accent) var(--p,0%), #F0E9D9 0)}
+.kpi-row{display:flex;align-items:center;gap:14px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:600 13px Manrope;cursor:pointer}
+.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.badge{font:700 11px Manrope;letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:#FFFBF0}
+.badge.b1{background:#FFF1F1;border-color:#FFD6D3;color:#B42318}
+.badge.b2{background:#FFF7E6;border-color:#FFD9A0;color:#8A4B00}
+.badge.b3{background:#EFF3FF;border-color:#C9D7FF;color:#1E3A8A}
+.card h3{margin:0;font-size:17px;letter-spacing:-.02em;line-height:1.25}
+.card p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
+.card-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.card-meta span{border:1px solid var(--line);background:#FFFBF0;border-radius:999px;padding:5px 9px}
+.card-actions{display:flex;gap:8px;margin-top:auto}
+.card-actions button{flex:1}
+.card.big{grid-column:span 2;background:linear-gradient(135deg,#141310 0%, #2B241E 100%);color:#fff;border-color:#2B241E}
+.card.big p{color:#CFCAC0}
+@media(max-width:620px){.card.big{grid-column:span 1}}
+.today{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:18px}
+@media(max-width:900px){.today{grid-template-columns:1fr}}
+.today-list{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px}
+.today-list h3{margin:0 0 12px;font-size:18px}
+.step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #F2EDE3}
+.step:last-child{border:0}
+.step-num{width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 13px Manrope;flex-shrink:0}
+.step b{font-size:14px}
+.step p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
+.step .go{margin-left:auto;align-self:center;white-space:nowrap}
+.trainer{position:fixed;inset:0;background:rgba(20,19,16,.55);backdrop-filter:blur(6px);display:none;place-items:center;padding:18px;z-index:50}
+.trainer.on{display:grid}
+.sheet{width:min(760px,100%);background:#FFFBF0;border-radius:28px;overflow:hidden;border:1px solid var(--line);max-height:92vh;display:flex;flex-direction:column}
+.sheet-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;position:sticky;top:0}
+.sheet-body{padding:20px;overflow:auto}
+.wordbox{background:var(--ink);color:#fff;border-radius:20px;padding:18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wordbox b{font-size:28px;letter-spacing:-.03em}
+.timer{width:220px;height:220px;border-radius:50%;margin:18px auto;display:grid;place-items:center;position:relative;background:conic-gradient(var(--accent) var(--deg,0deg), #E8E0CC 0deg);padding:10px}
+.timer-inner{width:100%;height:100%;background:#FFFBF0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line)}
+.timer-inner b{font-size:44px;letter-spacing:-.04em;line-height:1}
+.timer-inner span{font:600 12px JetBrains Mono;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:8px 0 14px}
+.pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.pills button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;font:700 13px Manrope;cursor:pointer}
+.pills button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hint{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;font-size:13.5px;line-height:1.5;color:#3A362F}
+.hint b{color:var(--ink)}
+.progress-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+@media(max-width:700px){.progress-grid{grid-template-columns:1fr}}
+.mini{border:1px solid var(--line);background:#fff;border-radius:18px;padding:16px}
+.mini h4{margin:0 0 6px;font-size:14px}
+.mini p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+.calendar div{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;font:600 12px Manrope;background:#fff}
+.calendar div.done{background:var(--ink);color:#fff;border-color:var(--ink)}
+.calendar div.today{outline:2px solid var(--accent);outline-offset:2px}
+footer{padding:30px 0 40px;color:var(--muted);font-size:13px;text-align:center}
+.kbd{font:600 12px JetBrains Mono;background:#fff;border:1px solid var(--line);border-bottom-width:2px;padding:3px 7px;border-radius:7px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hdr">
+    <div class="logo">
+      <div class="logo-mark">РР</div>
+      <div>Речевой Реактор <small>тренажёр импровизации • 15 мин/день • дома один</small></div>
+    </div>
+    <nav class="nav">
+      <button class="on" data-tab="today">Сегодня</button>
+      <button data-tab="library">Библиотека</button>
+      <button data-tab="progress">Прогресс</button>
+      <button data-tab="videos">Видео</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-main">
+      <div style="display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 10px;font:700 11px Manrope;letter-spacing:.08em">БЛОК 1 + 2 + 3 • СОЛО-ТРЕНИРОВКИ</div>
+      <h1>Говори без пауз.<br>Управляй диалогом.</h1>
+      <p>Одна тренировка = 15 минут. Открыл → прочитал → нажал таймер → говоришь вслух. Без партнёра, без стеснения. Основа — Джонстон, Кантиль, Карнеги, Роджерс, Арон. 30 упражнений с таймером.</p>
+      <div class="hero-cta">
+        <button class="btn btn-primary" id="startToday">▶ Запустить тренировку на сегодня</button>
+        <button class="btn btn-ghost" onclick="switchTab('library')">Открыть библиотеку упражнений</button>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;font:600 12px JetBrains Mono;color:#CFCAC0"><span>● таймер с гонгом</span><span>● случайные слова</span><span>● диктофон-подсказки</span></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-row">
+          <div class="kpi-ring" id="ring" style="--p:42%"><span id="ringTxt" style="background:#fff;width:68px;height:68px;border-radius:50%;display:grid;place-items:center">42%</span></div>
+          <div>
+            <b id="streakVal">3 дня</b><br><span>серия • не срывай цепочку</span>
+            <div style="margin-top:8px;display:flex;gap:6px"><span class="kbd">Пробел</span><span style="font-size:12px;color:var(--muted)">— старт/пауза таймера</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi" style="background:linear-gradient(135deg,#FF3B30 0%, #FF8A00 100%);color:#fff;border-color:transparent">
+        <b style="font-size:18px">Быстрый старт: 60 сек</b>
+        <span style="color:#fff;opacity:.9">Упражнение «Пулемёт слов» — проверь сколько слов достанешь за минуту. Жми и говори.</span>
+        <button class="btn btn-dark" style="margin-top:12px;background:#fff;color:var(--ink)" onclick="openTrainer('e1')">Проверить сейчас →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TODAY -->
+  <section id="tab-today">
+    <div class="today">
+      <div class="today-list">
+        <h3>Тренировка на сегодня — 15:00 <span style="font:500 13px Manrope;color:var(--muted)">• адаптировано для одного</span></h3>
+        <div id="todaySteps"></div>
+        <div style="margin-top:12px;display:flex;gap:10px">
+          <button class="btn btn-primary" id="runToday2">▶ Запустить по шагам</button>
+          <button class="btn btn-ghost" onclick="shuffleToday()">↻ Перемешать</button>
+        </div>
+        <div class="hint" style="margin-top:14px">💡 <b>Лайфхак для одного:</b> включи диктофон на телефоне, поставь телефон напротив, смотри себе в глаза. Говори как будто рассказываешь другу. Не оценивай — просто не останавливайся 60 сек.</div>
+      </div>
+      <div class="today-list" style="background:var(--ink);color:#fff;border-color:var(--ink)">
+        <h3 style="color:#fff">Место для тренировки</h3>
+        <p style="color:#CFCAC0;margin:0 0 12px;font-size:13.5px">Специально для дома. Выбери где сейчас удобнее — упражнения подстроятся.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="btn btn-ghost" style="justify-content:center" onclick="setPlace('Зеркало')">🪞 Зеркало</button>
+          <button class="btn btn-ghost" style="justify-content:center" onclick="setPlace('Кухня')">🍳 Кухня</button>
+          <button class="btn btn-ghost" style="justify-content:center" onclick="setPlace('Прогулка')">🎧 Прогулка</button>
+          <button class="btn btn-ghost" style="justify-content:center" onclick="setPlace('Диван')">🛋️ Диван</button>
+        </div>
+        <div id="placeHint" class="hint" style="margin-top:14px;background:#1E1C18;color:#EDE8DD;border-color:#2A2723">Выбери место — покажу подсказку как тренироваться именно там.</div>
+        <div style="margin-top:14px;display:flex;gap:8px;align-items:center;font:600 12px JetBrains Mono;color:#CFCAC0">● таймер работает в фоне ● гонг в конце ● автосохранение</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="tab-library" style="display:none">
+    <div style="display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="margin:18px 0 4px;font-size:26px;letter-spacing:-.03em">Библиотека упражнений — 30 штук</h2>
+        <p style="margin:0;color:var(--muted);font-size:14px">Сначала много — потом сократим. Источник указан у каждого, чтобы ты видел откуда взялось и мог углубиться.</p>
+      </div>
+      <div style="font:600 12px JetBrains Mono;color:var(--muted)">СОЛО-АДАПТАЦИЯ • ТАЙМЕР • СЛУЧАЙНЫЕ СЛОВА</div>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="tab-progress" style="display:none">
+    <h2 style="margin:18px 0 6px">Прогресс</h2>
+    <div class="progress-grid">
+      <div class="mini"><h4>🔥 Серия</h4><p><b id="pStreak">3 дня</b> подряд. Цель — 14. Не обнуляй.</p><div class="calendar" id="cal"></div></div>
+      <div class="mini"><h4>⏱ Всего натренировано</h4><p><b id="pTotal">0 мин</b> • <span id="pCount">0</span> тренировок. Таймер внизу считает всё автоматом.</p><div style="margin-top:10px;height:10px;background:#F2EDE3;border-radius:999px;overflow:hidden"><div id="pBar" style="height:100%;width:0;background:var(--accent)"></div></div><p style="margin-top:8px;font-size:12px;color:var(--muted)">До значка «7 дней» осталось 4 дня</p></div>
+      <div class="mini"><h4>📈 Слова в минуту</h4><p>Последний замер: <b id="pWpm">—</b>. Норма 60+ сущ/мин, 25+ на букву.</p><button class="btn btn-ghost" style="margin-top:10px" onclick="openTrainer('e1')">Сделать замер →</button></div>
+    </div>
+    <div class="hint" style="margin-top:14px">Как проверяется быстро? Запиши 60 сек «Пулемёта» на диктофон, посчитай слова. Рост на 10 за неделю = ты перевёл ~50 слов из пассива в актив.</div>
+  </section>
+
+  <!-- VIDEOS -->
+  <section id="tab-videos" style="display:none">
+    <h2 style="margin:18px 0 6px">Видео — посмотреть наглядно (на русском)</h2>
+    <p style="color:var(--muted);margin:0 0 12px">Подобрал разборы тех же упражнений, чтобы видеть как это делают вживую.</p>
+    <div class="grid" id="videoGrid"></div>
+  </section>
+
+  <footer>Сделано для тебя • Открой → Прочитай → Нажми таймер → Говори вслух • Пробел = старт/пауза</footer>
+</main>
+
+<!-- TRAINER MODAL -->
+<div class="trainer" id="trainer">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <div style="font:700 11px Manrope;letter-spacing:.08em;color:var(--muted)" id="tBadge">БЛОК 1 • 60 СЕК</div>
+        <div style="font:800 18px Manrope;letter-spacing:-.02em" id="tTitle">Пулемёт слов</div>
+        <div style="font:500 13px Manrope;color:var(--muted)" id="tSub">Говори вслух без пауз</div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeTrainer()">✕ Закрыть</button>
+    </div>
+    <div class="sheet-body">
+      <div class="wordbox" id="wordBox">
+        <div><div style="font:700 11px Manrope;letter-spacing:.08em;opacity:.7">СЛОВО / ТЕМА</div><b id="word">ХОЛОДИЛЬНИК</b><div style="font-size:12px;opacity:.7" id="wordHint">говори 2 мин без пауз</div></div>
+        <button class="btn btn-ghost" style="background:#fff" onclick="newWord()">↻ Другое слово</button>
+      </div>
+
+      <div class="timer" id="timer"><div class="timer-inner"><b id="time">01:00</b><span id="tState">готов</span></div></div>
+
+      <div class="pills" id="timePills">
+        <button data-s="30">30 сек</button>
+        <button data-s="60" class="on">60 сек</button>
+        <button data-s="120">2 мин</button>
+        <button data-s="300">5 мин</button>
+        <button data-s="600">10 мин</button>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="btnStart" style="min-width:160px">▶ Старт</button>
+        <button class="btn btn-ghost" id="btnPause">Пауза</button>
+        <button class="btn btn-ghost" id="btnReset">Сброс</button>
+      </div>
+
+      <div class="hint" id="tHint"></div>
+
+      <details style="margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px">
+        <summary style="cursor:pointer;font:700 13px Manrope">📖 Пошагово как делать (нажми чтобы раскрыть)</summary>
+        <div id="tSteps" style="margin-top:10px;font-size:13.5px;line-height:1.6;color:#3A362F"></div>
+      </details>
+
+      <div style="margin-top:14px;display:flex;gap:10px">
+        <button class="btn btn-primary" style="flex:1" onclick="completeExercise()">✓ Готово, засчитать</button>
+        <button class="btn btn-ghost" onclick="closeTrainer()">Позже</button>
+      </div>
+      <div style="margin-top:8px;text-align:center;font:600 12px JetBrains Mono;color:var(--muted)">Совет: включи диктофон на телефоне рядом — потом послушаешь и посчитаешь слова</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const exercises = [
+  // БЛОК 1 — пассив -> актив
+  {id:'e1', block:'Блок 1', badge:'b1', time:'60 сек', diff:'★☆☆', title:'Пулемёт существительных', desc:'60 сек говори только существительные. Пробивает застойную зону.', source:'Кантиль стр.5 + Джонстон Free Association', steps:'<b>Шаг 1:</b> Таймер 60 сек, включи диктофон.<br><b>Шаг 2:</b> Говори ЛЮБЫЕ существительные вслух, быстро, не составляя предложений.<br><b>Шаг 3:</b> Нельзя молчать >2 сек. Если завис — говори первое что видишь.<br><b>Пример:</b> «стол, окно, космос, кефир, тревога, балкон...»<br><b>Ошибка:</b> пытаться говорить красиво. Говори любое, даже «какашка».', example:'Норма: 60+ слов/мин — хорошо, 80+ — отлично.', w:'КОСМОС'},
+  {id:'e2', block:'Блок 1', badge:'b1', time:'60 сек', diff:'★☆☆', title:'Поток на одну букву', desc:'60 сек только слова на одну букву. Отключает критика.', source:'Кантиль стр.6 + Джонстон Alphabet', steps:'<b>Шаг 1:</b> Выбери букву (жми «другое слово» — там буквы).<br><b>Шаг 2:</b> 60 сек — только слова на эту букву.<br><b>Шаг 3:</b> Ищи по звуку, не по смыслу.<br><b>Пример на К:</b> «кошка, кепка, космос, круассан, кулак...»', example:'Норма 25-30 слов/мин.', w:'К'},
+  {id:'e3', block:'Блок 1', badge:'b1', time:'60 сек', diff:'★☆☆', title:'Что вижу — называю', desc:'Стоя называй всё вокруг на скорости. Ловишь забытые слова.', source:'Кантиль стр.6', steps:'<b>Шаг 1:</b> Встань, оглядись.<br><b>Шаг 2:</b> 60 сек называй всё что видишь, показывая пальцем.<br><b>Шаг 3:</b> На скорости забудешь «плинтус» — это и есть застой, пробивай.', example:'Делай на кухне: «кран, губка, пятно, ручка...»', w:'КУХНЯ'},
+  {id:'e4', block:'Блок 1', badge:'b1', time:'6 мин', diff:'★★☆', title:'Чтение + мгновенный пересказ', desc:'5 мин читаешь вслух + 1 мин пересказ своими словами с теми же словами.', source:'Квинтилиан + Выготский + Nation', steps:'<b>Шаг 1:</b> 5 мин читай вслух Довлатова/Чехова с выражением, стоя.<br><b>Шаг 2:</b> Закрой книгу, 60 сек перескажи вслух, вставляя красивые слова из текста.<br><b>Пример:</b> прочитал «хроническая неприязнь» — вставь её в пересказ.', example:'Без пересказа чтение не переводит в актив!', w:'ДОВЛАТОВ'},
+  {id:'e5', block:'Блок 1', badge:'b1', time:'3 мин', diff:'★★☆', title:'Синонимический штурм', desc:'Берёшь простое слово и даёшь 10 синонимов за минуту.', source:'Львов + Караулов (русская лингвистика)', steps:'<b>Шаг 1:</b> Слово «красивый».<br><b>Шаг 2:</b> 60 сек: «прекрасный, великолепный, очаровательный, эффектный...»<br><b>Шаг 3:</b> Потом слово «быстро», «говорить».', example:'Расширяет актив на 5-7 слов за подход.', w:'КРАСИВЫЙ'},
+  {id:'e6', block:'Блок 1', badge:'b1', time:'3 мин', diff:'★★☆', title:'Парафраз — тремя способами', desc:'Одну мысль скажи 3-мя разными фразами. Сразу применимо в жизни.', source:'Feynman + Toastmasters', steps:'<b>Мысль:</b> «я устал»<br>1. «я выжат как лимон»<br>2. «батарейка села»<br>3. «меня диван загипнотизировал»<br>Сделай 3 мысли.', example:'Используй в переписке вместо «ок».', w:'Я УСТАЛ'},
+  {id:'e7', block:'Блок 1', badge:'b1', time:'2 мин', diff:'★☆☆', title:'Метафора «Моя ... — это ...»', desc:'Придумай метафору для дома, работы, любви. Тянет образность.', source:'Кантиль стр.12', steps:'<b>Шаг 1:</b> «Мой дом — это...» придумай 3 варианта: свой, от лица ребёнка, от лица скептика.<br><b>Пример:</b> «Мой дом — это берлога с Wi-Fi»', example:'Слушай метафоры других людей в течение дня.', w:'МОЯ РАБОТА — ЭТО...'},
+
+  // БЛОК 2 — импровизация, ассоциации, переключение, истории
+  {id:'e8', block:'Блок 2', badge:'b2', time:'2–10 мин', diff:'★★★', title:'Бредогенератор (ядро)', desc:'Говори на случайное слово 2-10 мин без пауз. Король упражнений.', source:'Джонстон Waffle + Шипунов + Кантиль стр.9-11', steps:'<b>Шаг 1:</b> Жми «другое слово» — выпадет случайное (лёгкое/среднее/сложное).<br><b>Шаг 2:</b> Таймер 2 мин (1 неделя) → 5 мин (2 неделя).<br><b>Шаг 3:</b> Говори без пауз. Ушёл в сторону? Отлично. Вернись приёмом «ромашка»: «так вот, возвращаясь к слову...»<br><b>Пример на ХОЛОДИЛЬНИК:</b> «Холодильник гудит как трактор → трактор в детстве на даче → пыль на поле → пыль в холодильнике...»', example:'Критерий: 0 пауз >2 сек за 2 мин = зачёт.', w:'ХОЛОДИЛЬНИК'},
+  {id:'e9', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★★☆', title:'Цепочка ассоциаций', desc:'Последнее слово = начало новой темы. Тренирует переключение.', source:'Джонстон Free Association + Кантиль Ассоциации', steps:'<b>Шаг 1:</b> Слово «ЯБЛОКО»<br>«Яблоко красное → красный Ferrari → Ferrari быстрая → быстро летит отпуск → в отпуске был в Сочи...»<br><b>Шаг 2:</b> 90 сек без остановки.', example:'Идеально когда в компании повисла пауза.', w:'ЯБЛОКО'},
+  {id:'e10', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★★☆', title:'Алфавит — предложения по буквам', desc:'Тема «Еда», каждое новое предложение на след. букву алфавита.', source:'Джонстон Alphabet Game (классика импро)', steps:'<b>Тема: Еда</b><br>А — Арбуз ем летом.<br>Б — Бананы беру на работу.<br>В — Вареники лепит бабушка...<br>Дойди до Ж за 2 мин.', example:'Убивает страх «что сказать дальше».', w:'ЕДА'},
+  {id:'e11', block:'Блок 2', badge:'b2', time:'3 мин', diff:'★★☆', title:'Да, и... (Yes, and)', desc:'Принимай любую идею и достраивай. База Джонстона.', source:'Кит Джонстон + Tina Fey (SNL) + Improv', steps:'<b>Соло-версия:</b> Берёшь абсурд: «На улице идут макароны».<br>Твоя задача 60 сек говорить «Да, и...» — не спорить, а развивать:<br>«Да, и я взял вилку, и пошёл есть... Да, и соседи...»', example:'Учит не блочить себя и собеседника.', w:'ИДУТ МАКАРОНЫ'},
+  {id:'e12', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★★☆', title:'Адвокат дьявола', desc:'Докажи противоположное своему мнению 60 сек.', source:'ТРИЗ + Дебаты + Джонстон Status', steps:'<b>Шаг 1:</b> Тезис «Кофе вреден» — докажи что полезен.<br><b>Шаг 2:</b> 60 сек без пауз.<br><b>Шаг 3:</b> Потом наоборот.', example:'Тренирует гибкость и аргументацию.', w:'КОФЕ ВРЕДЕН → ПОЛЕЗЕН'},
+  {id:'e13', block:'Блок 2', badge:'b2', time:'3 мин', diff:'★★☆', title:'Вопрос-ответ (сам себе)', desc:'Задай вопрос и сам ответь. Спасает когда потерялся.', source:'Кантиль стр.10 «Вопросно-ответный ход»', steps:'<b>Пример:</b> «Зачем мы путешествуем? Конечно чтобы... А что важно не забыть? Важно взять...»<br>Так ты выигрываешь 3-4 сек на подумать без паузы.', example:'Используй в начале любой речи.', w:'ЗАЧЕМ МЫ...?'},
+  {id:'e14', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★☆☆', title:'Противопоставление', desc:'Раскрой тему через противоположности.', source:'Кантиль стр.10', steps:'<b>Тема: Путешествия</b><br>«Можно не путешествовать вообще... Можно с туром за 300к, а можно дикарём с палаткой...»<br>Сравни 3 пары.', example:'Делает речь объёмной.', w:'ОТДЫХ: ДОРОГО vs ДИКАРЁМ'},
+  {id:'e15', block:'Блок 2', badge:'b2', time:'4 мин', diff:'★★★', title:'История в настоящем + 3 канала', desc:'Расскажи бытовую историю в настоящем времени через вижу/слышу/чувствую.', source:'Станиславский + Макки Story + Дикс Storyworthy + Пол Зак', steps:'<b>Было:</b> «Я опоздал на поезд, бежал.»<br><b>Стало:</b> «Бегу на вокзал, вижу табло «2 мин», слышу объявление, чувствую рюкзак бьёт по спине...»<br>Возьми историю дня и пересобери.', example:'Слушатель видит кино в голове.', w:'МОЙ ВЧЕРАШНИЙ ДЕНЬ'},
+  {id:'e16', block:'Блок 2', badge:'b2', time:'3 мин', diff:'★★☆', title:'Драматизация — в лицах', desc:'Расскажи диалог, меняя голоса и паузы.', source:'Кантиль стр.20 + Станиславский', steps:'<b>Шаг 1:</b> Вспомни диалог (с таксистом, кассиром).<br><b>Шаг 2:</td> Сыграй обоих: «Он мне: — Девушка, куда? — Я ему шепотом: — На край света...»<br>Меняй темп и громкость.', example:'Даже скучная история становится живой.', w:'ДИАЛОГ С ТАКСИСТОМ'},
+  {id:'e17', block:'Блок 2', badge:'b2', time:'3 мин', diff:'★★☆', title:'Эмоциональный переключатель', desc:'Одну историю расскажи с 3 эмоциями.', source:'Станиславский + Джонстон Masks', steps:'<b>История:</b> «как я пролил кофе»<br>1. Расскажи радостно 30 сек<br>2. Те же факты — грустно 30 сек<br>3. Зло 30 сек<br>Чувствуешь как меняется голос и жесты?', example:'Тренирует интонации (Кантиль стр.15).', w:'ПРОЛИЛ КОФЕ'},
+  {id:'e18', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★☆☆', title:'Комплимент по формуле', desc:'Деталь + чувство + фантазия. Не банально.', source:'Лейл Лаундес + Чалдини', steps:'<b>Формула:</b> Деталь + эффект на тебя + приятная фантазия.<br><b>Плохо:</b> «классный пиджак»<br><b>Хорошо:</b> «Крутое сочетание цветов, выглядит собранно. Ты наверное и в интерьере так же?»', example:'Делай 2 комплимента в день.', w:'КОМПЛИМЕНТ'},
+  {id:'e19', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★★☆', title:'Объясни как ребёнку (Feynman)', desc:'Объясни сложное слово просто, будто ребёнку 7 лет.', source:'Ричард Фейнман + Stanford', steps:'<b>Слово:</b> «инфляция»<br>Плохо: «обесценивание денег...»<br>Хорошо: «Представь, у тебя 100р, а мороженое стоило 50, а стало 100...»<br>60 сек.', example:'Если не можешь просто — не понял глубоко.', w:'ЧТО ТАКОЕ КРИПТОВАЛЮТА?'},
+  {id:'e20', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★★☆', title:'10 применений предмета', desc:'Придумай 10 необычных применений скрепке.', source:'Гилфорд (тест креативности) + ТРИЗ', steps:'<b>Предмет:</b> скрепка.<br>«1. Заколка 2. Отмычка 3. Антенна...»<br>60 сек, 10 штук.', example:'Разгоняет дивергентное мышление.', w:'СКРЕПКА'},
+  {id:'e21', block:'Блок 2', badge:'b2', time:'3 мин', diff:'★★☆', title:'Новости без подготовки', desc:'Берёшь заголовок и комментируешь 90 сек.', source:'Toastmasters Table Topics', steps:'<b>Заголовок:</b> «В Японии открыли кафе с котами»<br>90 сек: мнение, ассоциация, история, вывод.<br>Тренирует позицию.', example:'Смотри заголовки в телефоне — и говори.', w:'ЗАГОЛОВОК ДНЯ'},
+  {id:'e22', block:'Блок 2', badge:'b2', time:'2 мин', diff:'★☆☆', title:'Сторителлинг по фото', desc:'Открой случайное фото в галерее и расскажи историю 90 сек.', source:'Мэттью Дикс + Кантиль Истории', steps:'<b>Шаг 1:</b> Случайное фото.<br><b>Шаг 2:</b> 90 сек: «Что случилось за 5 сек до фото и через 5 сек после?»<br>Добавь детали вижу/слышу/чувствую.', example:'Лучшая тренировка для компании.', w:'ФОТО ИЗ ГАЛЕРЕИ'},
+  // БЛОК 3 — управление разговором (второй этап из твоего конспекта)
+  {id:'e23', block:'Блок 3', badge:'b3', time:'3 мин', diff:'★☆☆', title:'Эхо-перефраз', desc:'Верни мысль собеседника своими словами. База активного слушания.', source:'Карл Роджерс Active Listening + Томас Гордон', steps:'<b>Шаг 1:</b> Включи запись любого интервью на ютубе.<br><b>Шаг 2:</b> После каждой фразы гостя ставь паузу и вслух: «То есть ты имеешь в виду, что... Правильно?»<br><b>Фразы:</b> «Правильно ли я понимаю, что...», «Ты говоришь, что для тебя важно...»<br><b>Соло-лайфхак:</b> Делай с диктофоном — запиши свой монолог и перефразируй себя.', example:'Человек чувствует что его услышали — тянется к тебе.', w:'ПЕРЕФРАЗИРУЙ'},
+  {id:'e24', block:'Блок 3', badge:'b3', time:'4 мин', diff:'★★☆', title:'3 углубляющих вопроса', desc:'Выведи любой факт на эмоцию и ценность за 3 вопроса.', source:'Лейл Лаундес + Тамир/Митчелл Harvard', steps:'<b>Факт:</b> «Был в Казани»<br><b>Вопрос 1 (факт):</b> «А что там делал?»<br><b>Вопрос 2 (эмоция):</b> «А что больше всего зацепило?»<br><b>Вопрос 3 (ценность):</b> «А почему для тебя это важно?»<br>Тренируй связку 3 вопроса на одну тему, не прыгая.', example:'Не анкетируй: 3 вопроса — одна тема.', w:'БЫЛ В КАЗАНИ'},
+  {id:'e25', block:'Блок 3', badge:'b3', time:'3 мин', diff:'★★☆', title:'Лестница тем', desc:'Потренируй переход: лёгкая → средняя → глубокая тема.', source:'Альтман и Тейлор Social Penetration + Арон 36 вопросов', steps:'<b>Уровень 1 лёгкая:</b> «Как добирался? Как тебе место?»<br><b>Уровень 2 средняя:</b> «Чем сейчас горишь кроме работы?»<br><b>Уровень 3 глубокая:</b> «О чём мечтаешь в ближайший год?»<br>Соло: наговори на диктофон 60 сек на каждом уровне на тему «работа».', example:'Если на лёгкой отвечает односложно — не лезь в глубь.', w:'ЛЕСТНИЦА ТЕМ'},
+  {id:'e26', block:'Блок 3', badge:'b3', time:'3 мин', diff:'★★☆', title:'Пинг-понг', desc:'Каждая твоя реплика заканчивается мячом — вопросом.', source:'Твой конспект + Маршалл Розенберг', steps:'<b>Правило:</b> Сказал 30 сек — кинь мяч: «А у тебя как?», «А ты бы что выбрал?»<br><b>Соло:</b> Расскажи 30 сек историю и закончи вопросом к воображаемому собеседнику.<br><b>Ошибка:</b> монолог >60 сек без вопроса.', example:'Диалог — настольный теннис, не лекция.', w:'КИНЬ МЯЧ'},
+  {id:'e27', block:'Блок 3', badge:'b3', time:'2 мин', diff:'★★☆', title:'Микро-раскрытие', desc:'30 сек честно о себе без фильтра — тренирует доверие.', source:'Сидни Джурард The Transparent Self + Арон', steps:'<b>Шаг 1:</b> Фраза: «Честно, я сегодня...»<br><b>Пример:</b> «Честно, я немного волновался перед встречей, никого не знал.»<br><b>Шаг 2:</b> 30 сек добавь одну живую деталь + лёгкую самоиронию.<br>Делай перед зеркалом, смотри в глаза.', example:'Откровенность на 3/10 вызывает ответную.', w:'ЧЕСТНО, Я...'},
+  {id:'e28', block:'Блок 3', badge:'b3', time:'5 мин', diff:'★★★', title:'Баланс 30/50', desc:'Засёк таймером: 30% ты, 50% собеседник. Тренировка на записи.', source:'Марк Роудз + Карнеги + Tamir PNAS 2012', steps:'<b>Шаг 1:</b> Включи диктофон, поговори 3 мин с воображаемым собеседником.<br><b>Шаг 2:</b> Прослушай и засеки: сколько говорил ты?<br><b>Норма:</b> ты 30-40%, собеседник 50%+.<br>Если ты >60% — ты «душнила», <10% — допрос.', example:'Люди считают интересным того, рядом с кем сами болтали.', w:'30/50'},
+  {id:'e29', block:'Блок 3', badge:'b3', time:'2 мин', diff:'★☆☆', title:'Анти-допрос', desc:'Научись вставлять реакцию перед следующим вопросом.', source:'Карл Роджерс + Лейл Лаундес', steps:'<b>Плохо (допрос):</b> «Где работаешь? А хобби какое? А где живёшь?»<br><b>Хорошо:</b> «Где работаешь? — В IT. — О, IT сейчас... (реакция + 2 сек) А что в ней больше нравится?»<br>Соло: запиши 3 вопроса с реакцией.', example:'Реакция = «Ух ты, это...» + кивок.', w:'РЕАКЦИЯ + ВОПРОС'},
+  {id:'e30', block:'Блок 3', badge:'b3', time:'2 мин', diff:'★☆☆', title:'Невербальный коннект', desc:'Кивки, взгляд, пауза — без них слова пустые.', source:'Кантиль Метасообщение + Мехрабиан 7-38-55', steps:'<b>Шаг 1:</b> Перед зеркалом 60 сек говори и держи контакт глаз 70%.<br><b>Шаг 2:</b> Добавь лёгкие кивки каждый 5 сек и паузу 1 сек после фразы собеседника.<br><b>Проверка:</b> Запиши видео — видишь ли доброжелательность?', example:'Тело говорит громче слов.', w:'ЗЕРКАЛО'},
+];
+
+const wordsEasy = ["ЧАЙ","КОТ","ОКНО","ДОМ","ЛЕТО","СНЕГ","МУЗЫКА","КНИГА","ДОРОГА","КОФЕ"];
+const wordsMed = ["ХОЛОДИЛЬНИК","ЧЕМОДАН","СВАДЬБА","РЕМОНТ","ПЕРЕЕЗД","СОСЕДИ","МАГАЗИН","АЭРОПОРТ"];
+const wordsHard = ["КАРБЮРАТОР","ПОМАДА","НАРАЩИВАНИЕ РЕСНИЦ","КВАНТОВЫЙ","ИПОТЕКА","БЮРОКРАТИЯ","ЭКЗИСТЕНЦИАЛИЗМ"];
+const allWords = [...wordsEasy,...wordsMed,...wordsHard];
+const letters = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ".split("");
+
+const videos = [
+  {t:'Сергей Шипунов — Бредогенератор. Как говорить без пауз', d:'Классический разбор упражнения «60 слов» и «бредогенератор» от автора термина в РФ. Показывает как не бояться пауз.', q:'Сергей Шипунов бредогенератор'},
+  {t:'Радислав Гандапас — Скороговорки и словесная импровизация', d:'Упражнения на дикцию и поток речи, тот же принцип что у Джонстона.', q:'Гандапас словесная импровизация'},
+  {t:'Нина Зверева — Как говорить легко и быть интересным', d:'Тележурналист, школа речи. Разбор «вопрос-ответ», «ромашка» и историй в настоящем.', q:'Нина Зверева речевая импровизация'},
+  {t:'TEDx — Как рассказывать истории (Мэттью Дикс на русском)', d:'Перевод выступления автора Storyworthy — про структуру истории и «5 секунд».', q:'Мэттью Дикс сторителлинг TED перевод'},
+  {t:'Кит Джонстон — Impro интервью (с субтитрами)', d:'Сам Джонстон объясняет «Yes, and» и почему нельзя пытаться быть умным.', q:'Keith Johnstone Yes and improv'},
+  {t:'Toastmasters Table Topics — ответы без подготовки', d:'Формат импровизации 1-2 мин на случайную тему — точь-в-точь наш бредогенератор.', q:'Toastmasters Table Topics на русском'},
+  {t:'Станиславский — метод физических действий (разбор)', d:'Коротко про «вижу-слышу-чувствую» и метасообщение — откуда взялись истории в настоящем.', q:'Станиславский предлагаемые обстоятельства разбор'},
+];
+
+let currentId=null, timer=null, remain=60, total=60, running=false, todayIds=['e1','e8','e23','e15'];
+
+function renderFilters(){
+  const cats=['Все','Блок 1','Блок 2','Блок 3'];
+  const f=document.getElementById('filters');
+  f.innerHTML=cats.map(c=>`<button data-cat="${c}" class="${c==='Все'?'on':''}">${c}</button>`).join('');
+  f.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    f.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    renderGrid(b.dataset.cat);
+  });
+}
+function renderGrid(cat='Все'){
+  const grid=document.getElementById('grid');
+  const list = cat==='Все'? exercises : exercises.filter(e=>e.block===cat);
+  grid.innerHTML = list.map(e=>`
+    <div class="card">
+      <div class="card-top"><span class="badge ${e.badge}">${e.block} • ${e.source.split(' ')[0]}</span><span style="font:600 12px JetBrains Mono;color:var(--muted)">${e.time} • ${e.diff}</span></div>
+      <h3>${e.title}</h3>
+      <p>${e.desc}</p>
+      <div class="card-meta"><span>📚 ${e.source}</span></div>
+      <div class="card-actions"><button class="btn btn-primary" onclick="openTrainer('${e.id}')">▶ Тренировать</button><button class="btn btn-ghost" onclick="openTrainer('${e.id}',true)">Читать</button></div>
+    </div>
+  `).join('');
+}
+function renderToday(){
+  const c=document.getElementById('todaySteps');
+  c.innerHTML = todayIds.map((id,i)=>{
+    const e=exercises.find(x=>x.id===id);
+    return `<div class="step"><div class="step-num">${i+1}</div><div><b>${e.title}</b> — ${e.time}<p>${e.desc}</p></div><button class="btn btn-ghost go" onclick="openTrainer('${id}')">▶</button></div>`;
+  }).join('');
+}
+function switchTab(tab){
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  document.getElementById('tab-today').style.display = tab==='today'? '' : 'none';
+  document.getElementById('tab-library').style.display = tab==='library'? '' : 'none';
+  document.getElementById('tab-progress').style.display = tab==='progress'? '' : 'none';
+  document.getElementById('tab-videos').style.display = tab==='videos'? '' : 'none';
+  document.getElementById('hero').style.display = tab==='today'? '' : 'none';
+  if(tab==='videos') renderVideos();
+}
+function renderVideos(){
+  const g=document.getElementById('videoGrid');
+  g.innerHTML = videos.map(v=>`
+    <div class="card">
+      <div class="badge b3">YOUTUBE • RU</div>
+      <h3>${v.t}</h3>
+      <p>${v.d}</p>
+      <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(v.q)}" target="_blank" class="btn btn-primary" style="text-decoration:none;justify-content:center">▶ Смотреть подборку</a>
+      <div style="font:500 12px Manrope;color:var(--muted)">Запрос: «${v.q}» — открой и выбери верхнее видео</div>
+    </div>
+  `).join('');
+}
+function setPlace(p){
+  const hints={
+    'Зеркало':'Смотри себе в глаза, держи осанку. Говори стоя — энергия +2 балла (Кантиль стр.13).',
+    'Кухня':'Отлично для «Что вижу» — тут 30 предметов. Тренируйся пока ждёшь чайник.',
+    'Прогулка':'Надень наушники с микрофоном, говори тихо. Люди подумают что ты по телефону.',
+    'Диван':'Сядь на край, спина ровно. Не разваливайся — иначе голос сядет.'
+  };
+  document.getElementById('placeHint').textContent = '📍 ' + p + ': ' + hints[p];
+}
+function shuffleToday(){
+  const pool = exercises.filter(e=>e.time.includes('60')||e.time.includes('2')).map(e=>e.id);
+  todayIds = [pool[Math.floor(Math.random()*pool.length)], 'e3', 'e8', 'e4'];
+  // ensure unique
+  todayIds = [...new Set(todayIds)].slice(0,4);
+  while(todayIds.length<4) todayIds.push(exercises[Math.floor(Math.random()*exercises.length)].id);
+  renderToday();
+  save();
+}
+
+// trainer logic
+function openTrainer(id, justRead=false){
+  currentId=id;
+  const e=exercises.find(x=>x.id===id);
+  document.getElementById('tBadge').textContent = e.block.toUpperCase() + ' • ' + e.time;
+  document.getElementById('tTitle').textContent = e.title;
+  document.getElementById('tSub').textContent = e.desc;
+  document.getElementById('tHint').innerHTML = `<b>Источник:</b> ${e.source}<br><b>Пример:</b> ${e.example}`;
+  document.getElementById('tSteps').innerHTML = e.steps + `<div style="margin-top:8px;padding:8px;background:#FFFBF0;border-radius:10px;border:1px dashed #E8DCC2"><b>Соло-лайфхак:</b> Включи диктофон, говори в полный голос. После — прослушай и посчитай слова/паузы. Это твоя проверка.</div>`;
+  newWord(true);
+  setDuration( e.time.includes('30')?30 : e.time.includes('60')&& !e.time.includes('2–')?60 : 120 );
+  document.getElementById('trainer').classList.add('on');
+  if(justRead) pause();
+}
+function closeTrainer(){ pause(); document.getElementById('trainer').classList.remove('on');}
+function newWord(initial=false){
+  const e=exercises.find(x=>x.id===currentId);
+  if(!e) return;
+  let w='';
+  if(e.id==='e2') w = letters[Math.floor(Math.random()*letters.length)];
+  else if(e.id==='e8' || e.id==='e11' || e.id==='e21') {
+    const r=Math.random();
+    w = r<0.4? wordsEasy[Math.floor(Math.random()*wordsEasy.length)] : r<0.8? wordsMed[Math.floor(Math.random()*wordsMed.length)] : wordsHard[Math.floor(Math.random()*wordsHard.length)];
+  } else w = e.w;
+  // 30% chance randomize anyway for variety
+  if(!initial && Math.random()<0.2) w = allWords[Math.floor(Math.random()*allWords.length)];
+  document.getElementById('word').textContent = w;
+}
+function setDuration(s){
+  total=s; remain=s; updateDisplay();
+  document.querySelectorAll('#timePills button').forEach(b=>b.classList.toggle('on', parseInt(b.dataset.s)===s));
+}
+function updateDisplay(){
+  const m = String(Math.floor(remain/60)).padStart(2,'0');
+  const sec = String(remain%60).padStart(2,'0');
+  document.getElementById('time').textContent = `${m}:${sec}`;
+  const p = total? ( (total-remain)/total*360 ) : 0;
+  document.getElementById('timer').style.setProperty('--deg', p+'deg');
+  document.getElementById('tState').textContent = running? 'говори...' : remain===total? 'готов' : 'пауза';
+}
+function tick(){
+  if(!running) return;
+  remain--;
+  updateDisplay();
+  if(remain<=0){
+    running=false;
+    clearInterval(timer);
+    // gong
+    try{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type='sine'; o.frequency.value=880; g.gain.value=0.2;
+      o.connect(g); g.connect(ctx.destination); o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.8);
+      setTimeout(()=>o.stop(),800);
+      if(navigator.vibrate) navigator.vibrate(200);
+    }catch{}
+    document.getElementById('tState').textContent='готово! ✓';
+    // auto count
+    addMinutes(total/60);
+  }
+}
+function play(){ if(running) return; running=true; timer=setInterval(tick,1000); updateDisplay();}
+function pause(){ running=false; clearInterval(timer); updateDisplay();}
+function reset(){ pause(); remain=total; updateDisplay();}
+
+document.getElementById('btnStart').onclick=play;
+document.getElementById('btnPause').onclick=pause;
+document.getElementById('btnReset').onclick=reset;
+document.querySelectorAll('#timePills button').forEach(b=>b.onclick=()=>setDuration(parseInt(b.dataset.s)));
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space' && document.getElementById('trainer').classList.contains('on')){
+    e.preventDefault();
+    running? pause(): play();
+  }
+  if(e.code==='Escape') closeTrainer();
+});
+document.getElementById('trainer').addEventListener('click',e=>{
+  if(e.target.id==='trainer') closeTrainer();
+});
+document.getElementById('startToday').onclick=()=>openTrainer(todayIds[0]);
+document.getElementById('runToday2').onclick=()=>openTrainer(todayIds[0]);
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+// progress store
+function save(){
+  localStorage.setItem('rr_today', JSON.stringify(todayIds));
+  localStorage.setItem('rr_streak', document.getElementById('streakVal').textContent);
+}
+function load(){
+  const t=localStorage.getItem('rr_today');
+  if(t) try{ todayIds=JSON.parse(t);}catch{}
+  const s=localStorage.getItem('rr_streak');
+  if(s) document.getElementById('streakVal').textContent=s;
+  const mins=parseFloat(localStorage.getItem('rr_mins')||'0');
+  const cnt=parseInt(localStorage.getItem('rr_cnt')||'0');
+  document.getElementById('pTotal').textContent = Math.round(mins)+' мин';
+  document.getElementById('pCount').textContent = cnt;
+  document.getElementById('pBar').style.width = Math.min(100, cnt/14*100)+'%';
+  // streak calendar
+  const cal=document.getElementById('cal');
+  if(cal){
+    cal.innerHTML='';
+    for(let i=0;i<14;i++){
+      const d=document.createElement('div');
+      d.textContent=i+1;
+      if(i<3) d.classList.add('done');
+      if(i===3) d.classList.add('today');
+      cal.appendChild(d);
+    }
+  }
+  const pct = Math.min(100, Math.round(cnt/7*100));
+  document.getElementById('ring').style.setProperty('--p', pct+'%');
+  document.getElementById('ringTxt').textContent=pct+'%';
+  document.getElementById('pStreak').textContent = document.getElementById('streakVal').textContent;
+}
+function addMinutes(m){
+  let mins=parseFloat(localStorage.getItem('rr_mins')||'0');
+  let cnt=parseInt(localStorage.getItem('rr_cnt')||'0');
+  mins+=m; cnt+=1;
+  localStorage.setItem('rr_mins', mins);
+  localStorage.setItem('rr_cnt', cnt);
+  load();
+}
+function completeExercise(){
+  addMinutes(total/60);
+  // streak +1
+  let cur = parseInt((localStorage.getItem('rr_streakNum')||'3'));
+  cur+=1;
+  localStorage.setItem('rr_streakNum', cur);
+  document.getElementById('streakVal').textContent = cur+' '+ (cur===1?'день':cur<5?'дня':'дней');
+  save(); load();
+  closeTrainer();
+  alert('Засчитано! +'+Math.round(total/60)+' мин. Так держать — серия растёт.');
+}
+renderFilters(); renderGrid(); renderToday(); load();
+setPlace('Зеркало');
+</script>
+</body>
+</html>
