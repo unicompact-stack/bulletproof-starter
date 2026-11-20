@@ -1,0 +1,100 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const L = require('./logic');
+
+test('неделя начинается с понедельника и пересекает границу года', () => {
+  assert.equal(L.monday('2027-01-01'), '2026-12-28');
+  assert.equal(L.addDays('2026-12-28', 6), '2027-01-03');
+});
+test('задача требует название и корректную дату', () => {
+  assert.throws(() => L.task({ title:'  ' }));
+  assert.throws(() => L.task({ title:'Задача', date:'2026-02-31' }));
+  assert.throws(() => L.task({ title:'Задача', time:'99:00' }));
+  assert.equal(L.task({title:'  Тест  ', date:''}).title, 'Тест');
+});
+test('отмена требует причину и сохраняет задачу и историю', () => {
+  const s=L.empty(); const t=L.task({title:'План', date:'2026-11-20'}); s.tasks.push(t);
+  assert.throws(() => L.changeStatus(s,t.id,'cancelled',''));
+  L.changeStatus(s,t.id,'cancelled','Не актуально');
+  assert.equal(s.tasks.length,1); assert.equal(t.status,'cancelled');
+  assert.match(s.history[0].text,/Не актуально/);
+  L.changeStatus(s,t.id,'open'); assert.equal(t.status,'open');
+});
+test('просрочка только для невыполненных задач с датой раньше сегодня', () => {
+  const today='2026-11-20';
+  assert.equal(L.overdue({status:'open',date:'2026-11-19'},today),true);
+  assert.equal(L.overdue({status:'done',date:'2026-11-19'},today),false);
+  assert.equal(L.overdue({status:'open',date:''},today),false);
+  assert.equal(L.overdue({status:'open',date:today},today),false);
+});
+test('резервная копия проверяется и не подменяет статус ошибочными данными', () => {
+  assert.throws(() => L.validateBackup({tasks:'no', history:[]}));
+  assert.throws(() => L.validateBackup({version:1, tasks:[{id:'a',title:'X',status:'wat'}], history:[],notes:''}));
+  const data=L.empty(); data.tasks.push(L.task({title:'Сделать'}));
+  assert.deepEqual(L.validateBackup(JSON.parse(JSON.stringify(data))),data);
+});
+test('отчёт содержит контекст, задачи и историю без скрытых данных', () => {
+  const s=L.empty(); s.notes='Моя цель'; s.tasks.push(L.task({title:'Первый шаг'}));
+  L.changeStatus(s,s.tasks[0].id,'done');
+  const report=L.report(s); assert.match(report,/Моя цель/); assert.match(report,/Первый шаг/); assert.match(report,/История/);
+});
+
+test('календарные месяцы корректно переходят через год', () => {
+  assert.equal(L.addMonths('2026-12-01', 1), '2027-01-01');
+  assert.equal(L.addMonths('2026-01-01', -1), '2025-12-01');
+  assert.equal(L.addMonths('2026-01-31', 1), '2026-02-28');
+});
+test('пакет задач валидируется и добавляется без повторов и удаления существующих дел', () => {
+  const s=L.empty(); s.tasks.push(L.task({id:'existing',title:'Уже было'}));
+  const batch={format:'personal-planner-tasks-v1',tasks:[{id:'batch-1',title:'Новая',date:'2026-11-20',time:''},{id:'batch-2',title:'Ещё',date:'',time:''}]};
+  assert.equal(L.mergeBatch(s,batch),2); assert.equal(L.mergeBatch(s,batch),0); assert.equal(s.tasks.length,3);
+  assert.throws(()=>L.mergeBatch(s,{format:batch.format,tasks:[{id:'a',title:'Сломано',date:'2026-02-31',time:''}]}));
+  assert.equal(s.tasks.length,3);
+});
+test('пакет нельзя использовать для смены статусов существующих задач', () => {
+  const s=L.empty();s.tasks.push(L.task({id:'x',title:'Старая'}));
+  assert.throws(()=>L.mergeBatch(s,{format:'personal-planner-tasks-v1',tasks:[{id:'new',title:'Новая',date:'',time:'',status:'done'}]}));
+  assert.equal(s.tasks.length,1);assert.equal(s.tasks[0].status,'open');
+});
+
+test('голосовая сводка различает задачи на сегодня и просроченные', () => {
+  const s=L.empty();
+  assert.match(L.briefing(s,'2026-11-20'),/на сегодня запланированных задач нет/i);
+  s.tasks.push(L.task({title:'Отложенная',date:'2026-11-19'}));
+  assert.match(L.briefing(s,'2026-11-20'),/просрочен/i);
+  s.tasks.push(L.task({title:'Сегодня',date:'2026-11-20'}));
+  s.tasks.push(L.task({title:'Выполненная',date:'2026-11-20',status:'done'}));
+  const b=L.briefing(s,'2026-11-20');assert.match(b,/Сегодня/);assert.match(b,/просрочен/i);assert.doesNotMatch(b,/Выполненная/);
+});
+
+test('старая копия сохраняет задачи и заметки при миграции',()=>{
+ const old={version:1,tasks:[{id:'old',title:'Старое',date:'',time:'',status:'open'}],notes:'Заметка',history:[]};
+ const s=L.validateBackup(old);assert.equal(s.notes,'Заметка');assert.equal(s.tasks[0].title,'Старое');assert.equal(s.draft,'');assert.deepEqual(s.suggestions,[]);
+});
+test('предложения добавляются без повторов; действия атомарны',()=>{
+ const s=L.empty(),batch={format:'personal-planner-suggestions-v1',suggestions:[{id:'one',title:'Забор',date:'2026-11-23',time:'',reason:'Вторая часть'},{id:'two',title:'Разобрать дела',date:'',time:'',reason:''}]};
+ assert.equal(L.mergeSuggestions(s,batch),2);assert.equal(L.mergeSuggestions(s,batch),0);
+ L.decideSuggestion(s,'one','accept');assert.equal(s.tasks.length,1);assert.equal(s.tasks[0].date,'2026-11-23');
+ assert.throws(()=>L.decideSuggestion(s,'one','accept'));assert.equal(s.tasks.length,1);
+ L.decideSuggestion(s,'two','later');assert.equal(s.suggestions[1].status,'later');
+ L.decideSuggestion(s,'two','reject');assert.equal(L.mergeSuggestions(s,batch),0);assert.equal(s.tasks.length,1);
+ assert.deepEqual(L.validateBackup(JSON.parse(JSON.stringify(s))),s);
+});
+test('импорт ошибок не меняет состояние; старый пакет становится предложениями',()=>{
+ const s=L.empty();const before=JSON.stringify(s);
+ assert.throws(()=>L.mergeSuggestions(s,{format:'personal-planner-suggestions-v1',suggestions:[{id:'a',title:'Хорошо',date:'',time:'',reason:''},{id:'b',title:'Плохо',date:'2026-02-31',time:'',reason:''}]}));
+ assert.equal(JSON.stringify(s),before);
+ assert.equal(L.mergeSuggestions(s,{format:'personal-planner-tasks-v1',tasks:[{id:'old-packet',title:'Старый пакет',date:'',time:''}]}),1);
+ assert.equal(s.tasks.length,0);assert.equal(s.suggestions[0].status,'pending');
+});
+test('отчёт для чата содержит черновик, предложения и идентификаторы задач',()=>{
+ const s=L.empty();s.draft='Неструктурированный текст';s.tasks.push(L.task({id:'task-x',title:'Существующая'}));
+ L.mergeSuggestions(s,{format:'personal-planner-suggestions-v1',suggestions:[{id:'q',title:'Новая',date:'',time:'',reason:'Проверить'}]});
+ const r=L.report(s);assert.match(r,/Неструктурированный текст/);assert.match(r,/task-x/);assert.match(r,/Новая/);
+});
+
+test('повторный импорт старого пакета не предлагает уже добавленную задачу',()=>{
+ const s=L.empty();s.tasks.push(L.task({id:'legacy-task',title:'Сохранённая'}));
+ const old={format:'personal-planner-tasks-v1',tasks:[{id:'legacy-task',title:'Сохранённая',date:'',time:''}]};
+ assert.equal(L.mergeSuggestions(s,old),0);assert.equal(s.suggestions.length,0);assert.equal(s.tasks.length,1);
+});
