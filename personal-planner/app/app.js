@@ -44,9 +44,11 @@
     $('dialog-title').textContent=item?'Задача':'Новая задача';
     $('task-title').value=item?.title || ''; $('task-date').value=item?.date || date; $('task-time').value=item?.time || '';
     $('task-note').value=item?.note || '';$('task-obstacle').value=item?.obstacle || '';$('task-next-step').value=item?.nextStep || '';$('task-income').checked=item ? item.income===true : incomeDefault;
+    $('task-progress-text').value=item?.progressText || '';$('task-progress-done').value=item?.progress?.done ?? '';$('task-progress-total').value=item?.progress?.total ?? '';$('task-progress-unit').value=item?.progress?.unit || '';
+    $('task-progress').open=Boolean(item && (item.status==='progress' || item.progress || item.progressText));
     $('task-review').open=Boolean(item && L.overdue(item,today()));
-    $('dialog-status').textContent=item ? ({open:'В работе',done:'Выполнено',cancelled:'Отменено'})[item.status] : '';
-    $('mark-done').hidden=!item || item.status!=='open'; $('reopen').hidden=!item || item.status==='open'; $('cancel-task').hidden=!item || item.status==='cancelled';
+    $('dialog-status').textContent=item ? ({open:'Запланировано',progress:'В процессе',done:'Выполнено',cancelled:'Отменено'})[item.status] : '';
+    $('mark-progress').hidden=!item || item.status==='progress'; $('mark-done').hidden=!item || item.status==='done'; $('reopen').hidden=!item || item.status==='open'; $('cancel-task').hidden=!item || item.status==='cancelled';
     $('task-dialog').showModal(); $('task-title').focus();
   }
   function taskButton(item,mini=false){
@@ -54,9 +56,9 @@
     button.type='button';
     if(!mini && item.time) button.append(element('small','',item.time));
     button.append(element(mini?'span':'strong','',item.title));
-    const status=item.status==='done'?'✓ Выполнено':item.status==='cancelled'?'Отменено':L.overdue(item,today())?'Просрочено':'Запланировано';
+    const status=item.status==='done'?'✓ Выполнено':item.status==='cancelled'?'Отменено':L.overdue(item,today())?(item.status==='progress'?'Просрочено · в процессе':'Просрочено'):item.status==='progress'?'В процессе':'Запланировано';
     if(mini){if(item.date || item.status!=='open')button.append(element('small','',`${item.date?fmt(item.date,{day:'numeric',month:'short'}):'Без даты'} · ${status}`));}
-    else button.append(element('span','task-status',status));
+    else button.append(element('span','task-status',status+(item.progress?' · '+L.progressLabel(item.progress):'')));
     button.addEventListener('click',()=>openTask(item));return button;
   }
   function renderList(target,items,emptyText){target.replaceChildren(); if(!items.length)target.append(element('p','empty-small',emptyText));else items.forEach(t=>target.append(taskButton(t,true)));}
@@ -135,7 +137,7 @@
     const grid=$('week-grid'); grid.replaceChildren();
     document.querySelectorAll('.view-tab').forEach(tab=>{const active=tab.dataset.view===view;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));});
     $('view-heading').textContent={week:'Неделя',month:'Месяц',year:'Год'}[view];
-    const currentTasks=state.tasks.filter(t=>t.date===today() && t.status==='open');
+    const currentTasks=state.tasks.filter(t=>t.date===today() && L.active(t));
     $('today-summary').textContent=!canWrite ? '· сохранённые данные недоступны' : currentTasks.length ? `· ${taskCount(currentTasks.length)}: ${currentTasks.slice(0,2).map(t=>t.title).join(', ')}${currentTasks.length>2?' и другие':''}` : '· запланированных задач нет';
     $('voice-today').disabled=!canWrite;
     $('example-notice').hidden=!state.tasks.some(t=>t.id.startsWith('demo-20261120-'));
@@ -189,22 +191,26 @@
   function applyTaskForm(next){
     const old=next.tasks.find(t=>t.id===editing);
     if(editing && !old)throw Error('Задача больше недоступна.');
-    const entry=L.task({id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value,income:$('task-income').checked});
+    const done=$('task-progress-done').value, total=$('task-progress-total').value, unit=$('task-progress-unit').value.trim();
+    if((done==='') !== (total==='') || (unit && done===''))throw Error('Укажи оба числа: сколько сделано и сколько всего, или оставь их пустыми.');
+    const progress=done===''?undefined:{done:Number(done),total:Number(total),unit};
+    const entry=L.task({progress,progressText:$('task-progress-text').value,id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value,income:$('task-income').checked});
     if(old){
       const before=`${old.title} (${old.date||'без даты'}${old.time?' '+old.time:''})`,after=`${entry.title} (${entry.date||'без даты'}${entry.time?' '+entry.time:''})`;
       if(before!==after)L.record(next,`Изменено: ${before} → ${after}`);
       if((old.income===true)!==entry.income)L.record(next,`${entry.income?'Отмечено как дело о заработке':'Снята отметка о заработке'}: ${entry.title}`);
       if((old.note||'')!==entry.note)L.record(next,`Обновлена заметка к задаче: ${entry.title}`);
       if((old.obstacle||'')!==entry.obstacle || (old.nextStep||'')!==entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);
-      Object.assign(old,entry);
-    }else {next.tasks.push(entry);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);if(entry.obstacle || entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);}
+      if((old.progressText||'')!==entry.progressText || JSON.stringify(old.progress||null)!==JSON.stringify(entry.progress||null))L.record(next,`Прогресс: ${entry.title}. Сделано: ${entry.progressText||'не указано'}${entry.progress?' · '+L.progressLabel(entry.progress):' · без числового объёма'}`);
+      delete old.progress;Object.assign(old,entry);
+    }else {next.tasks.push(entry);if(entry.progressText || entry.progress)L.record(next,`Прогресс: ${entry.title}. Сделано: ${entry.progressText||'не указано'}${entry.progress?' · '+L.progressLabel(entry.progress):''}`);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);if(entry.obstacle || entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);}
   }
   $('task-form').addEventListener('submit',event=>{
     event.preventDefault();try{const next=copy();applyTaskForm(next);if(commit(next))$('task-dialog').close();else{$('form-error').textContent=$('storage-error').textContent;$('form-error').hidden=false;}}
     catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}
   });
   function setStatus(status){const next=copy();let reason='';if(status==='cancelled'){reason=prompt('Почему задача больше не актуальна? Причина сохранится в истории.');if(reason===null)return;}try{applyTaskForm(next);L.changeStatus(next,editing,status,reason);if(commit(next))$('task-dialog').close();else{$('form-error').textContent=$('storage-error').textContent;$('form-error').hidden=false;}}catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}}
-  $('mark-done').onclick=()=>setStatus('done');$('reopen').onclick=()=>setStatus('open');$('cancel-task').onclick=()=>setStatus('cancelled');
+  $('mark-progress').onclick=()=>setStatus('progress');$('mark-done').onclick=()=>setStatus('done');$('reopen').onclick=()=>setStatus('open');$('cancel-task').onclick=()=>setStatus('cancelled');
   function saveNotes(){
     if(!notesDirty)return true;
     const next=copy();next.notes=$('notes').value;notesDirty=false;

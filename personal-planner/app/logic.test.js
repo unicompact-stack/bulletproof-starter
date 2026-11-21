@@ -128,3 +128,14 @@ test('недельная сводка считает только отмечен
 test('отметки дохода сохраняются в копии и отчёте, старые задачи не классифицируются',()=>{
  const s=L.empty();s.tasks.push(L.task({id:'income',title:'Найти клиента',date:'2026-11-20',income:true,note:'Мой контекст'}));s.tasks.push(L.task({id:'unknown',title:'Старое дело',date:'2026-11-20'}));const round=L.validateBackup(JSON.parse(JSON.stringify(s)));assert.deepEqual(round,s);assert.equal(round.tasks[1].income,undefined);assert.match(L.report(round),/Задача о заработке/);round.tasks[0].income='yes';assert.throws(()=>L.validateBackup(round));
 });
+
+test('частичное выполнение сохраняется, попадает в отчёт и остаётся открытым',()=>{
+ const s=L.empty();const t=L.task({id:'partial',title:'Условная задача',date:'2026-11-19',income:true,progressText:'Часть сделана',progress:{done:10,total:40,unit:'м²'}});s.tasks.push(t);
+ L.changeStatus(s,t.id,'progress');assert.equal(L.overdue(t,'2026-11-20'),true);assert.equal(L.incomeWeek(s,'2026-11-20').open,1);assert.match(L.briefing(s,'2026-11-19'),/Условная задача/);assert.equal(L.progressLabel(t.progress),'10 / 40 м² (25%; осталось 30 м²)');
+ const restored=L.validateBackup(JSON.parse(JSON.stringify(s)));assert.deepEqual(restored,s);assert.match(L.report(restored),/Часть сделана/);assert.match(L.report(restored),/осталось 30/);assert.equal(restored.tasks[0].date,'2026-11-19');
+ L.changeStatus(restored,'partial','done');assert.equal(L.overdue(restored.tasks[0],'2026-11-20'),false);assert.equal(restored.tasks[0].progress.done,10);
+});
+test('числовой прогресс валидируется, в том числе в резервных копиях',()=>{
+ for(const p of [{done:-1,total:40,unit:''},{done:41,total:40,unit:''},{done:0,total:0,unit:''},{done:'10',total:40,unit:''},{done:Infinity,total:40,unit:''},{done:1,total:2,unit:'x'.repeat(31)}])assert.throws(()=>L.task({title:'Тест',progress:p}));
+ const s=L.empty();s.tasks.push(L.task({title:'Тест',progress:{done:40,total:40,unit:'м²'}}));assert.equal(s.tasks[0].status,'open');s.tasks[0].progress.total=0;assert.throws(()=>L.validateBackup(s));
+});

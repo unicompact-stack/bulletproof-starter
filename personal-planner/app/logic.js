@@ -20,8 +20,13 @@
     if(date && !validDate(date)) throw Error('Укажите корректную дату.');
     if(time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw Error('Укажите корректное время.');
     const result={id:input.id||id(),title,date,time,status:input.status||'open'};
-    for(const field of ['note','obstacle','nextStep']) {
+    for(const field of ['note','obstacle','nextStep','progressText']) {
       if(input[field]!==undefined){if(typeof input[field]!=='string' || input[field].length>2000)throw Error('Текст заметки или разбора должен быть не длиннее 2000 символов.');result[field]=input[field];}
+    }
+    if(input.progress!==undefined){
+      const p=input.progress;
+      if(!p || typeof p!=='object' || Array.isArray(p) || typeof p.done!=='number' || !Number.isFinite(p.done) || typeof p.total!=='number' || !Number.isFinite(p.total) || p.done<0 || p.total<=0 || p.done>p.total || p.total>1e12 || typeof p.unit!=='string' || p.unit.length>30) throw Error('Укажите число сделанного от 0 до общего объёма; общий объём должен быть больше 0.');
+      result.progress={done:p.done,total:p.total,unit:p.unit};
     }
     if(input.income!==undefined){if(typeof input.income!=='boolean')throw Error('Некорректная отметка задачи о заработке.');result.income=input.income;}
     return result;
@@ -29,24 +34,25 @@
   const record = (state,text) => state.history.unshift({at:new Date().toISOString(),text});
   function changeStatus(state, taskId, status, reason='') {
     const item=state.tasks.find(t=>t.id===taskId);
-    if(!item || !['open','done','cancelled'].includes(status)) throw Error('Задача или статус не найдены.');
+    if(!item || !['open','progress','done','cancelled'].includes(status)) throw Error('Задача или статус не найдены.');
     if(status==='cancelled' && !reason.trim()) throw Error('Укажите причину отмены.');
     item.status=status;
-    const labels={open:'Возвращено в работу',done:'Выполнено',cancelled:'Отменено'};
+    const labels={open:'Возвращено в работу',progress:'В процессе',done:'Выполнено',cancelled:'Отменено'};
     record(state,`${labels[status]}: ${item.title}${status==='cancelled' ? ' — '+reason.trim() : ''}`);
   }
-  const overdue=(item,today)=>item.status==='open' && Boolean(item.date) && item.date<today;
+  const active=item=>item.status==='open' || item.status==='progress';
+  const overdue=(item,today)=>active(item) && Boolean(item.date) && item.date<today;
   function incomeWeek(s,day){
     const start=monday(day),end=addDays(start,6);
-    const matching=s.tasks.filter(t=>t.income===true && t.date>=start && t.date<=end && (t.status==='open' || t.status==='done'));
-    return {start,end,open:matching.filter(t=>t.status==='open').length,done:matching.filter(t=>t.status==='done').length};
+    const matching=s.tasks.filter(t=>t.income===true && t.date>=start && t.date<=end && (active(t) || t.status==='done'));
+    return {start,end,open:matching.filter(active).length,done:matching.filter(t=>t.status==='done').length};
   }
   function validateBackup(raw) {
     if(!raw || raw.version!==1 || !Array.isArray(raw.tasks) || !Array.isArray(raw.history) || typeof raw.notes!=='string') throw Error('Неверный формат резервной копии.');
     if(raw.tasks.length>10000 || raw.history.length>100000 || raw.notes.length>1000000) throw Error('Резервная копия слишком большая.');
     const seen=new Set();
     const tasks=raw.tasks.map(t=>{
-      if(!t || typeof t.id!=='string' || !t.id || seen.has(t.id) || typeof t.title!=='string' || typeof t.date!=='string' || typeof t.time!=='string' || !['open','done','cancelled'].includes(t.status)) throw Error('Ошибка в задаче резервной копии.');
+      if(!t || typeof t.id!=='string' || !t.id || seen.has(t.id) || typeof t.title!=='string' || typeof t.date!=='string' || typeof t.time!=='string' || !['open','progress','done','cancelled'].includes(t.status)) throw Error('Ошибка в задаче резервной копии.');
       seen.add(t.id); return task(t);
     });
     const history=raw.history.map(h=>{if(!h || typeof h.at!=='string' || Number.isNaN(Date.parse(h.at)) || typeof h.text!=='string' || h.text.length>10000) throw Error('Ошибка в истории резервной копии.'); return {at:h.at,text:h.text};});
@@ -105,17 +111,18 @@
   }
   function briefing(s, day) {
     if(!validDate(day)) throw Error('Некорректная дата');
-    const active=s.tasks.filter(t=>t.status==='open');
-    const todays=active.filter(t=>t.date===day).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
-    const late=active.filter(t=>overdue(t,day)).length;
+    const activeTasks=s.tasks.filter(active);
+    const todays=activeTasks.filter(t=>t.date===day).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+    const late=activeTasks.filter(t=>overdue(t,day)).length;
     let text=todays.length ? `На сегодня запланировано задач: ${todays.length}. ${todays.slice(0,3).map(t=>t.title).join('. ')}${todays.length>3?'. И другие задачи':''}.` : 'На сегодня запланированных задач нет.';
     if(late) text+=` Также есть просроченные задачи: ${late}.`;
     return text;
   }
+  const progressLabel=p=>`${p.done} / ${p.total}${p.unit?' '+p.unit:''} (${Math.round(p.done/p.total*100)}%; осталось ${Math.round((p.total-p.done)*1e8)/1e8}${p.unit?' '+p.unit:''})`;
   function report(s) {
-    const labels={open:'в работе',done:'выполнено',cancelled:'отменено'};
+    const labels={open:'запланировано',progress:'в процессе',done:'выполнено',cancelled:'отменено'};
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'неизвестен';
-    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
+    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.progressText?' · Сделано: '+t.progressText:''}${t.progress?' · Объём: '+progressLabel(t.progress):''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
   }
-  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,overdue,incomeWeek,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report};
+  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,active,overdue,incomeWeek,progressLabel,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report};
 });
