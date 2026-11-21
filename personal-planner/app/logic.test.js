@@ -144,3 +144,11 @@ test('единая сессия содержит все данные кален�
  const s=L.empty();s.notes='Личная заметка';s.draft='Черновик';s.tasks.push(L.task({id:'x',title:'Задача',status:'progress',progressText:'Часть',progress:{done:1,total:3,unit:'шт'}}));L.record(s,'История');L.mergeSuggestions(s,{format:'personal-planner-suggestions-v1',suggestions:[{id:'y',title:'Идея',date:'',time:'',reason:'Причина'}]});
  const file=L.session(s);assert.equal(file.format,'personal-planner-session-v1');assert.match(file.reportForChat,/Личная заметка/);assert.match(file.reportForChat,/Часть/);assert.deepEqual(L.validateBackup(JSON.parse(JSON.stringify(file))),s);
 });
+
+test('строгое чтение сессии не повреждает русский текст в UTF-8, UTF-16 и Windows-1251',()=>{
+ const text='{"title":"Привет"}';
+ const utf8=new TextEncoder().encode(text);assert.deepEqual(L.decodeSession(utf8),{text,encoding:'UTF-8'});
+ const cp=Uint8Array.from(Buffer.from([123,34,116,105,116,108,101,34,58,34,207,240,232,226,229,242,34,125]));assert.deepEqual(L.decodeSession(cp),{text,encoding:'Windows-1251'});
+ const le=Uint8Array.from(Buffer.concat([Buffer.from([0xff,0xfe]),Buffer.from(text,'utf16le')]));assert.deepEqual(L.decodeSession(le),{text,encoding:'UTF-16'});
+ assert.throws(()=>L.decodeSession(Uint8Array.from([0xff,0xfe,0xff])));assert.throws(()=>JSON.parse(L.decodeSession(Uint8Array.from([0x98])).text));assert.throws(()=>L.decodeSession('не байты'));
+});

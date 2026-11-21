@@ -124,6 +124,17 @@
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'неизвестен';
     return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.progressText?' · Сделано: '+t.progressText:''}${t.progress?' · Объём: '+progressLabel(t.progress):''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
   }
+  function decodeSession(bytes){
+    if(!(bytes instanceof Uint8Array))throw Error('Не удалось прочитать байты файла.');
+    const decode=label=>new TextDecoder(label,{fatal:true}).decode(bytes);
+    if(bytes.length>=2 && ((bytes[0]===0xff && bytes[1]===0xfe) || (bytes[0]===0xfe && bytes[1]===0xff))) {
+      const label=bytes[0]===0xff?'utf-16le':'utf-16be';
+      try{return {text:decode(label),encoding:'UTF-16'};}catch(e){throw Error('Файл UTF-16 повреждён или его кодировка не поддерживается.');}
+    }
+    try{return {text:decode('utf-8'),encoding:'UTF-8'};}catch(e){
+      try{return {text:decode('windows-1251'),encoding:'Windows-1251'};}catch(_){throw Error('Не удалось определить кодировку файла без потери текста.');}
+    }
+  }
   function session(s){const checked=validateBackup(s);return {...checked,format:'personal-planner-session-v1',savedAt:new Date().toISOString(),reportForChat:report(checked)};}
-  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,active,overdue,incomeWeek,progressLabel,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report,session};
+  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,active,overdue,incomeWeek,progressLabel,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report,decodeSession,session};
 });
