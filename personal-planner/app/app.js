@@ -251,10 +251,35 @@
     if(!saveDraft() || !saveNotes())return false;
     return true;
   }
-  $('backup').onclick=()=>{if(exportAllowed())download('moya-nedelya-backup.json',JSON.stringify(state,null,2),'application/json');};
-  $('export-report').onclick=()=>{if(exportAllowed())download('moya-nedelya-otchet.md',L.report(state),'text/markdown;charset=utf-8');};
-  $('download-chat').onclick=()=>$('export-report').click();$('intake-export').onclick=()=>$('export-report').click();
-  $('import-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('Файл больше 5 МБ.');const incoming=L.validateBackup(JSON.parse(await file.text()));if(confirm('Загрузка заменит все текущие задачи, заметки, текст, предложения и историю в этом браузере, включая несохранённые изменения. Сначала сохраните резервную копию. Продолжить?')){const hadDirtyNotes=notesDirty,hadDirtyDraft=draftDirty;clearTimeout(draftTimer);notesDirty=false;draftDirty=false;if(!commit(incoming,true)){notesDirty=hadDirtyNotes;draftDirty=hadDirtyDraft;}else{$('draft-status').textContent='Загружено из резервной копии.';$('note-status').textContent='Загружено из резервной копии.';}}}catch(e){error('Не удалось загрузить копию: '+e.message);}finally{event.target.value='';}});
+  let sessionText='';
+  function sessionFallback(message){
+    $('session-status').textContent=message;
+    $('session-text').value=sessionText;
+    if(!$('session-dialog').open)$('session-dialog').showModal();
+  }
+  async function saveSession(){
+    if(!exportAllowed())return;
+    try{sessionText=JSON.stringify(L.session(state),null,2);if(new Blob([sessionText]).size>50*1024*1024)throw Error('Сессия больше 50 МБ и не может быть восстановлена этой версией приложения.');}
+    catch(e){error('Не удалось подготовить сессию: '+e.message);return;}
+    if(typeof window.showSaveFilePicker!=='function'){
+      sessionFallback('Окно выбора файла в этом браузере недоступно. Попробуй загрузку или скопируй текст.');return;
+    }
+    try{
+      const handle=await window.showSaveFilePicker({suggestedName:'moya-sessiya.json',types:[{description:'Сессия планировщика',accept:{'application/json':['.json']}}]});
+      const writable=await handle.createWritable();
+      try{await writable.write(sessionText);await writable.close();}catch(e){try{await writable.abort();}catch(_){}throw e;}
+      sessionFallback('Файл записан. Храни его в безопасном месте; при желании отправь в чат.');
+    }catch(e){
+      sessionFallback(e && e.name==='AbortError'?'Сохранение отменено: файл не подтверждён. Можешь попробовать другой способ.':'Не удалось открыть окно или записать файл. Предпросмотр или браузер могут это запрещать. Попробуй загрузку или копирование.');
+    }
+  }
+  for(const id of ['backup','export-report','download-chat','intake-export'])$(id).onclick=saveSession;
+  $('close-session').onclick=()=>$('session-dialog').close();
+  $('session-download').onclick=()=>{try{download('moya-sessiya.json',sessionText,'application/json');$('session-status').textContent='Запрошена загрузка. Проверь папку «Загрузки» или окно браузера: предпросмотр может блокировать загрузки.';}catch(e){$('session-status').textContent='Загрузка не началась. Скопируй текст ниже.';}};
+  $('session-select').onclick=()=>{$('session-text').focus();$('session-text').select();$('session-status').textContent='Текст выделен. Скопируй его обычным способом и вставь в текстовый редактор.';};
+  $('session-copy').onclick=async()=>{try{if(!navigator.clipboard || !navigator.clipboard.writeText)throw Error('clipboard unavailable');await navigator.clipboard.writeText(sessionText);$('session-status').textContent='Текст скопирован. Вставь его в текстовый редактор и сохрани как moya-sessiya.json.';}catch(e){$('session-text').focus();$('session-text').select();$('session-status').textContent='Автоматическое копирование недоступно. Текст выделен — скопируй его вручную.';}};
+  async function importSession(event){const file=event.target.files[0];if(!file)return;try{if(file.size>50*1024*1024)throw Error('Файл больше 50 МБ.');const incoming=L.validateBackup(JSON.parse(await file.text()));if(confirm('Загрузка заменит все текущие задачи, заметки, текст, предложения и историю в этом браузере, включая несохранённые изменения. Сначала сохраните резервную копию. Продолжить?')){const hadDirtyNotes=notesDirty,hadDirtyDraft=draftDirty;clearTimeout(draftTimer);notesDirty=false;draftDirty=false;if(!commit(incoming,true)){notesDirty=hadDirtyNotes;draftDirty=hadDirtyDraft;}else{$('draft-status').textContent='Загружено из резервной копии.';$('note-status').textContent='Загружено из резервной копии.';if($('session-dialog').open)$('session-dialog').close();}}}catch(e){error('Не удалось загрузить копию: '+e.message);if($('session-dialog').open)$('session-status').textContent='Не удалось загрузить копию: '+e.message;}finally{event.target.value='';}}
+  for(const id of ['import-file','session-import-file'])$(id).addEventListener('change',importSession);
   $('batch-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>1024*1024)throw Error('Пакет больше 1 МБ.');const raw=JSON.parse(await file.text()),next=copy(),added=L.mergeSuggestions(next,raw);if(!added){$('proposal-feedback').textContent='Все предложения из этого пакета уже были загружены.';$('proposal-feedback').hidden=false;return;}if(confirm(`Загрузить предложений: ${added}? В календарь они попадут только после твоего подтверждения.`) && commit(next)){$('proposal-feedback').textContent=`Загружено предложений: ${added}. Проверь их перед добавлением.`;$('proposal-feedback').hidden=false;}}catch(e){error('Не удалось загрузить предложения: '+e.message);}finally{event.target.value='';}});
   $('remove-example').onclick=()=>{if(!confirm('Убрать все задачи с пометкой «Пример», включая сделанные в них изменения? Остальные задачи останутся.'))return;const next=copy();next.tasks=next.tasks.filter(t=>!t.id.startsWith('demo-20261120-'));L.record(next,'Демонстрационные задачи убраны');commit(next);};
   let syncInFlight=false;

@@ -139,3 +139,8 @@ test('числовой прогресс валидируется, в том чи
  for(const p of [{done:-1,total:40,unit:''},{done:41,total:40,unit:''},{done:0,total:0,unit:''},{done:'10',total:40,unit:''},{done:Infinity,total:40,unit:''},{done:1,total:2,unit:'x'.repeat(31)}])assert.throws(()=>L.task({title:'Тест',progress:p}));
  const s=L.empty();s.tasks.push(L.task({title:'Тест',progress:{done:40,total:40,unit:'м²'}}));assert.equal(s.tasks[0].status,'open');s.tasks[0].progress.total=0;assert.throws(()=>L.validateBackup(s));
 });
+
+test('единая сессия содержит все данные календаря и отчёт; восстанавливается как обычная копия',()=>{
+ const s=L.empty();s.notes='Личная заметка';s.draft='Черновик';s.tasks.push(L.task({id:'x',title:'Задача',status:'progress',progressText:'Часть',progress:{done:1,total:3,unit:'шт'}}));L.record(s,'История');L.mergeSuggestions(s,{format:'personal-planner-suggestions-v1',suggestions:[{id:'y',title:'Идея',date:'',time:'',reason:'Причина'}]});
+ const file=L.session(s);assert.equal(file.format,'personal-planner-session-v1');assert.match(file.reportForChat,/Личная заметка/);assert.match(file.reportForChat,/Часть/);assert.deepEqual(L.validateBackup(JSON.parse(JSON.stringify(file))),s);
+});

@@ -27,3 +27,6 @@ dialog textarea{display:block;width:100%;resize:vertical;border:1px solid #e8e4e
 
 /* Частичное выполнение не означает автоматического завершения задачи. */
 #task-progress{margin-top:15px;border:1px solid #e8e1f1;border-radius:10px;padding:11px}#task-progress summary{cursor:pointer;color:#634f77;font-size:12px;font-weight:700}
+
+/* Резервные способы сохранения, когда встроенный просмотр блокирует загрузку. */
+#session-dialog{max-height:calc(100dvh - 30px);overflow-y:auto}#session-dialog .session-status{padding:10px;border-radius:9px;background:#f3eef9;color:#59436d;font-size:13px;overflow-wrap:anywhere}.session-help,.session-privacy{font-size:12px;line-height:1.5;color:#5a5260}.session-privacy{padding:10px;border-radius:9px;background:#fff5e7;color:#6c5035}#session-text{font-family:monospace;font-size:11px;min-height:140px;margin-bottom:12px}#session-dialog .dialog-actions{margin-top:12px}#session-dialog .import-label{display:inline-block;margin:8px 0}
