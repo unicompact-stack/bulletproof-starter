@@ -152,3 +152,14 @@ test('строгое чтение сессии не повреждает рус�
  const le=Uint8Array.from(Buffer.concat([Buffer.from([0xff,0xfe]),Buffer.from(text,'utf16le')]));assert.deepEqual(L.decodeSession(le),{text,encoding:'UTF-16'});
  assert.throws(()=>L.decodeSession(Uint8Array.from([0xff,0xfe,0xff])));assert.throws(()=>JSON.parse(L.decodeSession(Uint8Array.from([0x98])).text));assert.throws(()=>L.decodeSession('не байты'));
 });
+
+test('шаги сохраняются в задаче, копии и отчёте независимо от её статуса',()=>{
+ const s=L.empty();s.tasks.push(L.task({id:'parent',title:'Задача',date:'2026-11-20',steps:[{id:'a',title:'Проверить',done:true},{id:'b',title:'Подготовить',done:false}]}));
+ assert.equal(s.tasks.length,1);assert.equal(s.tasks[0].status,'open');const copy=L.validateBackup(JSON.parse(JSON.stringify(L.session(s))));assert.deepEqual(copy,s);assert.match(L.report(copy),/\[x\] Проверить/);assert.match(L.report(copy),/\[ \] Подготовить/);
+ L.changeStatus(copy,'parent','done');assert.equal(copy.tasks[0].steps[1].done,false);assert.equal(copy.tasks.length,1);
+});
+test('валидируются шаги и поддерживаются старые копии без шагов',()=>{
+ const make=steps=>L.task({title:'Задача',steps});const good={id:'one',title:'Шаг',done:false};
+ assert.throws(()=>make('ошибка'));assert.throws(()=>make([{...good}, {...good}]));assert.throws(()=>make([{...good,done:'yes'}]));assert.throws(()=>make([{...good,title:' '} ]));assert.throws(()=>make([{title:'Шаг',done:false}]));assert.throws(()=>make(Array.from({length:51},(_,i)=>({...good,id:String(i)}))));
+ const s=L.empty();s.tasks.push(L.task({title:'Старая'}));assert.equal(L.validateBackup(s).tasks[0].steps,undefined);
+});

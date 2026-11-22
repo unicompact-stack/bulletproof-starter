@@ -38,10 +38,36 @@
     $('draft-status').textContent='Сохранено в этом браузере ✓';return true;
   }
   function element(tag,className,text){const node=document.createElement(tag);if(className) node.className=className;if(text!==undefined) node.textContent=text;return node;}
+  function updateStepCount(){const rows=[...$('step-list').querySelectorAll('.step-row')];$('step-count').textContent=rows.filter(row=>row.querySelector('.step-check').checked).length+' / '+rows.length;}
+  function drawStep(item){
+    const row=element('div','step-row');row.dataset.stepId=item.id;
+    const check=element('input','step-check');check.type='checkbox';check.checked=item.done;check.setAttribute('aria-label','Шаг выполнен');check.addEventListener('change',updateStepCount);
+    const text=element('input','step-title');text.type='text';text.maxLength=300;text.value=item.title;text.setAttribute('aria-label','Название шага');
+    const remove=element('button','step-remove','Убрать');remove.type='button';remove.setAttribute('aria-label','Убрать шаг: '+item.title);remove.onclick=()=>{row.remove();updateStepCount();};
+    row.append(check,text,remove);$('step-list').append(row);updateStepCount();
+  }
+  function addStepFromInput(){
+    try{if($('step-list').children.length>=50)throw Error('В задаче может быть не больше 50 шагов.');const item=L.step({title:$('new-step').value,done:false});drawStep(item);$('new-step').value='';$('form-error').hidden=true;$('new-step').focus();}
+    catch(e){$('form-error').textContent=e.message;$('form-error').hidden=false;}
+  }
+  $('add-step').onclick=addStepFromInput;
+  $('new-step').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addStepFromInput();}});
+  function readSteps(){
+    const steps=[...$('step-list').querySelectorAll('.step-row')].map(row=>L.step({id:row.dataset.stepId,title:row.querySelector('.step-title').value,done:row.querySelector('.step-check').checked}));
+    if($('new-step').value.trim())steps.push(L.step({title:$('new-step').value,done:false}));
+    if(steps.length>50)throw Error('В задаче может быть не больше 50 шагов.');
+    return steps;
+  }
+  function recordSteps(next,title,previous,current){
+    const oldMap=new Map(previous.map(x=>[x.id,x])),newMap=new Map(current.map(x=>[x.id,x]));
+    for(const before of previous)if(!newMap.has(before.id))L.record(next,`Шаг убран: ${title} — ${before.title}`);
+    for(const after of current){const before=oldMap.get(after.id);if(!before)L.record(next,`Шаг добавлен: ${title} — ${after.title}`);else{if(before.title!==after.title)L.record(next,`Шаг изменён: ${title} — ${before.title} → ${after.title}`);if(before.done!==after.done)L.record(next,`${after.done?'Шаг выполнен':'Отметка шага снята'}: ${title} — ${after.title}`);}}
+  }
   function openTask(item, date='', incomeDefault=false) {
     editing=item ? item.id : null;
     $('task-form').reset(); $('form-error').hidden=true;
     $('dialog-title').textContent=item?'Задача':'Новая задача';
+    $('step-list').replaceChildren();(item?.steps||[]).forEach(drawStep);updateStepCount();$('task-steps').open=Boolean(item?.steps?.length);
     $('task-title').value=item?.title || ''; $('task-date').value=item?.date || date; $('task-time').value=item?.time || '';
     $('task-note').value=item?.note || '';$('task-obstacle').value=item?.obstacle || '';$('task-next-step').value=item?.nextStep || '';$('task-income').checked=item ? item.income===true : incomeDefault;
     $('task-progress-text').value=item?.progressText || '';$('task-progress-done').value=item?.progress?.done ?? '';$('task-progress-total').value=item?.progress?.total ?? '';$('task-progress-unit').value=item?.progress?.unit || '';
@@ -58,7 +84,7 @@
     button.append(element(mini?'span':'strong','',item.title));
     const status=item.status==='done'?'✓ Выполнено':item.status==='cancelled'?'Отменено':L.overdue(item,today())?(item.status==='progress'?'Просрочено · в процессе':'Просрочено'):item.status==='progress'?'В процессе':'Запланировано';
     if(mini){if(item.date || item.status!=='open')button.append(element('small','',`${item.date?fmt(item.date,{day:'numeric',month:'short'}):'Без даты'} · ${status}`));}
-    else button.append(element('span','task-status',status+(item.progress?' · '+L.progressLabel(item.progress):'')));
+    else button.append(element('span','task-status',status+(item.progress?' · '+L.progressLabel(item.progress):'')+(item.steps?.length?' · Шаги '+item.steps.filter(x=>x.done).length+'/'+item.steps.length:'')));
     button.addEventListener('click',()=>openTask(item));return button;
   }
   function renderList(target,items,emptyText){target.replaceChildren(); if(!items.length)target.append(element('p','empty-small',emptyText));else items.forEach(t=>target.append(taskButton(t,true)));}
@@ -194,7 +220,8 @@
     const done=$('task-progress-done').value, total=$('task-progress-total').value, unit=$('task-progress-unit').value.trim();
     if((done==='') !== (total==='') || (unit && done===''))throw Error('Укажи оба числа: сколько сделано и сколько всего, или оставь их пустыми.');
     const progress=done===''?undefined:{done:Number(done),total:Number(total),unit};
-    const entry=L.task({progress,progressText:$('task-progress-text').value,id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value,income:$('task-income').checked});
+    const steps=readSteps();
+    const entry=L.task({steps:steps.length?steps:undefined,progress,progressText:$('task-progress-text').value,id:editing||undefined,title:$('task-title').value,date:$('task-date').value,time:$('task-time').value,status:old?.status||'open',note:$('task-note').value,obstacle:$('task-obstacle').value,nextStep:$('task-next-step').value,income:$('task-income').checked});
     if(old){
       const before=`${old.title} (${old.date||'без даты'}${old.time?' '+old.time:''})`,after=`${entry.title} (${entry.date||'без даты'}${entry.time?' '+entry.time:''})`;
       if(before!==after)L.record(next,`Изменено: ${before} → ${after}`);
@@ -202,8 +229,9 @@
       if((old.note||'')!==entry.note)L.record(next,`Обновлена заметка к задаче: ${entry.title}`);
       if((old.obstacle||'')!==entry.obstacle || (old.nextStep||'')!==entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);
       if((old.progressText||'')!==entry.progressText || JSON.stringify(old.progress||null)!==JSON.stringify(entry.progress||null))L.record(next,`Прогресс: ${entry.title}. Сделано: ${entry.progressText||'не указано'}${entry.progress?' · '+L.progressLabel(entry.progress):' · без числового объёма'}`);
-      delete old.progress;Object.assign(old,entry);
-    }else {next.tasks.push(entry);if(entry.progressText || entry.progress)L.record(next,`Прогресс: ${entry.title}. Сделано: ${entry.progressText||'не указано'}${entry.progress?' · '+L.progressLabel(entry.progress):''}`);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);if(entry.obstacle || entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);}
+      recordSteps(next,entry.title,old.steps||[],entry.steps||[]);
+      delete old.progress;delete old.steps;Object.assign(old,entry);
+    }else {next.tasks.push(entry);recordSteps(next,entry.title,[],entry.steps||[]);if(entry.progressText || entry.progress)L.record(next,`Прогресс: ${entry.title}. Сделано: ${entry.progressText||'не указано'}${entry.progress?' · '+L.progressLabel(entry.progress):''}`);L.record(next,`Добавлено: ${entry.title}${entry.date?' — '+entry.date:''}${entry.time?' '+entry.time:''}`);if(entry.obstacle || entry.nextStep)L.record(next,`Разбор: ${entry.title}. Что помешало: ${entry.obstacle||'не указано'}. Следующий шаг: ${entry.nextStep||'не указан'}`);}
   }
   $('task-form').addEventListener('submit',event=>{
     event.preventDefault();try{const next=copy();applyTaskForm(next);if(commit(next))$('task-dialog').close();else{$('form-error').textContent=$('storage-error').textContent;$('form-error').hidden=false;}}

@@ -14,6 +14,10 @@
   const addMonths = (value,n) => { if(!validDate(value)) throw Error('Некорректная дата'); const [y,m,day]=value.split('-').map(Number); const d=new Date(Date.UTC(y,m-1+n,1,12)); const end=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate(); d.setUTCDate(Math.min(day,end)); return d.toISOString().slice(0,10); };
   const id = () => (globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
   const empty = () => ({version:1, tasks:[], notes:'', history:[], draft:'', suggestions:[]});
+  function step(input) {
+    if(!input || typeof input!=='object' || typeof input.title!=='string' || !input.title.trim() || input.title.trim().length>300 || (input.id!==undefined && (typeof input.id!=='string' || !input.id || input.id.length>150)) || typeof input.done!=='boolean') throw Error('Укажи название каждого шага (до 300 символов).');
+    return {id:input.id || id(),title:input.title.trim(),done:input.done};
+  }
   function task(input) {
     const title=String(input.title||'').trim(), date=String(input.date||''), time=String(input.time||'');
     if(!title || title.length>300) throw Error('Введите название задачи (до 300 символов).');
@@ -27,6 +31,10 @@
       const p=input.progress;
       if(!p || typeof p!=='object' || Array.isArray(p) || typeof p.done!=='number' || !Number.isFinite(p.done) || typeof p.total!=='number' || !Number.isFinite(p.total) || p.done<0 || p.total<=0 || p.done>p.total || p.total>1e12 || typeof p.unit!=='string' || p.unit.length>30) throw Error('Укажите число сделанного от 0 до общего объёма; общий объём должен быть больше 0.');
       result.progress={done:p.done,total:p.total,unit:p.unit};
+    }
+    if(input.steps!==undefined){
+      if(!Array.isArray(input.steps) || input.steps.length>50)throw Error('В задаче может быть не больше 50 шагов.');
+      const seen=new Set();result.steps=input.steps.map(raw=>{if(!raw || typeof raw.id!=='string' || !raw.id)throw Error('Ошибка в шаге задачи.');const checked=step(raw);if(seen.has(checked.id))throw Error('Повторяется идентификатор шага.');seen.add(checked.id);return checked;});
     }
     if(input.income!==undefined){if(typeof input.income!=='boolean')throw Error('Некорректная отметка задачи о заработке.');result.income=input.income;}
     return result;
@@ -122,7 +130,7 @@
   function report(s) {
     const labels={open:'запланировано',progress:'в процессе',done:'выполнено',cancelled:'отменено'};
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'неизвестен';
-    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.progressText?' · Сделано: '+t.progressText:''}${t.progress?' · Объём: '+progressLabel(t.progress):''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
+    return '# Отчёт календаря\n\nСформирован: '+new Date().toISOString()+'; часовой пояс устройства: '+zone+'.\n\n# Контекст и цели\n\n'+(s.notes||'Не заполнено')+'\n\n# Текст для разбора\n\n'+(s.draft||'Не заполнено')+'\n\n# Задачи\n\n'+(s.tasks.map(t=>`- [${t.status==='done'?'x':' '}] ${t.title} — ${labels[t.status]}${t.date?' · '+t.date:''}${t.time?' '+t.time:''}${t.income?' · Задача о заработке':''}${t.note?' · Заметка: '+t.note:''}${t.progressText?' · Сделано: '+t.progressText:''}${t.progress?' · Объём: '+progressLabel(t.progress):''}${t.obstacle?' · Что помешало: '+t.obstacle:''}${t.nextStep?' · Следующий шаг: '+t.nextStep:''} · ID: ${t.id}${t.steps?.length?'\n'+t.steps.map(step=>`  - [${step.done?'x':' '}] ${step.title}`).join('\n'):''}`).join('\n')||'Пока нет задач')+'\n\n# Предложения\n\n'+(s.suggestions.filter(p=>p.status!=='accepted').map(p=>`- ${p.title} — ${p.status}${p.date?' · '+p.date:''}${p.time?' '+p.time:''}${p.reason?' · '+p.reason:''}${p.note?' · Заметка: '+p.note:''} · ID: ${p.id}`).join('\n')||'Нет предложений')+'\n\n# История\n\n'+(s.history.map(h=>'- '+h.at+' — '+h.text).join('\n')||'Пока нет записей')+'\n';
   }
   function decodeSession(bytes){
     if(!(bytes instanceof Uint8Array))throw Error('Не удалось прочитать байты файла.');
@@ -136,5 +144,5 @@
     }
   }
   function session(s){const checked=validateBackup(s);return {...checked,format:'personal-planner-session-v1',savedAt:new Date().toISOString(),reportForChat:report(checked)};}
-  return {validDate,addDays,addMonths,monday,empty,task,record,changeStatus,active,overdue,incomeWeek,progressLabel,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report,decodeSession,session};
+  return {validDate,addDays,addMonths,monday,empty,step,task,record,changeStatus,active,overdue,incomeWeek,progressLabel,validateBackup,mergeBatch,mergeSuggestions,decideSuggestion,briefing,report,decodeSession,session};
 });
