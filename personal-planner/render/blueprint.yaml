@@ -1,0 +1,17 @@
+# PUBLIC STATIC PREVIEW ONLY: no private database, no VK and no background jobs.
+# Provide this custom Blueprint Path explicitly; review name before creating a service.
+services:
+  - type: web
+    runtime: static
+    name: personal-planner-preview
+    rootDir: personal-planner
+    buildCommand: node render/build.cjs
+    staticPublishPath: ./render-public
+    autoDeployTrigger: 'off'
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
